@@ -33,6 +33,11 @@ import { useBookingStore } from '../../../stores/useBookingStore'
 import { useMarketplaceUiStore } from '../../../stores/useMarketplaceUiStore'
 
 const sports = ['Todos', 'Padel', 'Tenis', 'Voley', 'Futbol 5', 'Futbol 8', 'Futbol 11'] as const
+const heroSportSlides = [
+  { image: '/images/hero-sports/soccer.jpg', label: 'Fútbol', sport: 'Futbol' },
+  { image: '/images/hero-sports/padel.jpg', label: 'Pádel', sport: 'Padel' },
+  { image: '/images/hero-sports/running.jpg', label: 'Running', sport: 'Running' },
+] as const
 
 export function MarketplacePage() {
   const filters = useBookingStore((state) => state.filters)
@@ -117,7 +122,7 @@ function Hero() {
   return <Box className="landing-hero" sx={{
     bgcolor: 'primary.dark',
     color: 'common.white',
-    minHeight: { xs: 550, sm: 580, md: 610 },
+    minHeight: { xs: 644, sm: 674, md: 610 },
     position: 'relative',
     '@media (min-width: 900px) and (max-height: 760px)': { minHeight: 530 },
   }}>
@@ -143,10 +148,38 @@ function Hero() {
           </Stack>
         </Grid>
         <Grid size={{ xs: 12, md: 5 }}>
-          <LiveSchedule />
+          <HeroSportsPanel />
         </Grid>
       </Grid>
     </Container>
+  </Box>
+}
+
+function HeroSportsPanel() {
+  return <>
+    <Box className="rapi-hero-sports" sx={{ display: { xs: 'block', md: 'none' } }}>
+      <SportImageSlider compact />
+    </Box>
+    <Stack className="rapi-hero-sports" direction="row" spacing={1.5} sx={{ alignItems: 'stretch', display: { xs: 'none', md: 'flex' }, justifyContent: 'flex-end' }}>
+      <SportImageSlider />
+      <LiveSchedule />
+    </Stack>
+  </>
+}
+
+function SportImageSlider({ compact = false }: { compact?: boolean }) {
+  return <Box aria-label="Deportes destacados" className={`rapi-sport-image-slider${compact ? ' rapi-sport-image-slider-compact' : ''}`}>
+    {heroSportSlides.map((slide, index) => <Box className="rapi-sport-image-slide" key={slide.sport} sx={{ animationDelay: `${index * 4}s` }}>
+      <Box alt={`Persona practicando ${slide.label}`} component="img" src={slide.image} />
+      <Box className="rapi-sport-image-shade" />
+      <Stack className="rapi-sport-image-label" direction="row" spacing={0.75}>
+        <SportIcon sport={slide.sport} sx={{ fontSize: compact ? 18 : 20 }} />
+        <Typography sx={{ fontSize: compact ? 12 : 13, fontWeight: 950 }}>{slide.label}</Typography>
+      </Stack>
+    </Box>)}
+    <Stack className="rapi-sport-image-dots" direction="row" spacing={0.5}>
+      {heroSportSlides.map((slide, index) => <Box aria-hidden className="rapi-sport-image-dot" key={slide.sport} sx={{ animationDelay: `${index * 4}s` }} />)}
+    </Stack>
   </Box>
 }
 
@@ -156,8 +189,8 @@ function LiveSchedule() {
     { time: '19:00 - 20:00', available: true },
     { time: '20:00 - 21:00', available: false },
   ]
-  return <Box className="rapi-live-schedule" sx={{ display: { xs: 'none', md: 'block' }, ml: 'auto', maxWidth: 380, position: 'relative' }}>
-    <Box sx={{ bgcolor: 'rgba(255,255,255,.96)', borderRadius: 2, color: '#10201c', p: 3 }}>
+  return <Box className="rapi-live-schedule" sx={{ flex: 1, maxWidth: 310, minWidth: 0, position: 'relative' }}>
+    <Box sx={{ bgcolor: 'rgba(255,255,255,.96)', borderRadius: 2, color: '#10201c', p: 2.5 }}>
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
         <Box><Typography color="primary" sx={{ fontSize: 11, fontWeight: 950, textTransform: 'uppercase' }}>Agenda en vivo</Typography><Typography sx={{ fontSize: 25, fontWeight: 950, mt: 0.5 }}>Cancha Norte</Typography></Box>
         <Box sx={{ bgcolor: 'success.light', borderRadius: '50%', height: 10, width: 10 }} />

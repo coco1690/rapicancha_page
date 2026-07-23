@@ -1,4 +1,4 @@
-import { SportsBasketballOutlined, SportsSoccerOutlined, SportsTennisOutlined, SportsVolleyballOutlined } from '@mui/icons-material'
+import { DirectionsRunOutlined, SportsBasketballOutlined, SportsSoccerOutlined, SportsTennisOutlined, SportsVolleyballOutlined } from '@mui/icons-material'
 import { SvgIcon, type SvgIconProps } from '@mui/material'
 
 const normalizeSport = (value?: string | null) => (value ?? '')
@@ -12,6 +12,7 @@ export function SportIcon({ sport, ...props }: SvgIconProps & { sport?: string |
   if (value.includes('tenis') || value.includes('tennis')) return <SportsTennisOutlined {...props} />
   if (value.includes('voley') || value.includes('volley')) return <SportsVolleyballOutlined {...props} />
   if (value.includes('basket') || value.includes('baloncesto')) return <SportsBasketballOutlined {...props} />
+  if (value.includes('running') || value.includes('correr') || value.includes('atletismo')) return <DirectionsRunOutlined {...props} />
   if (value.includes('futbol') || value.includes('football') || value.includes('soccer')) return <SportsSoccerOutlined {...props} />
   return <SportsSoccerOutlined {...props} />
 }

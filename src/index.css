@@ -12,6 +12,40 @@ html {
   scroll-behavior: smooth;
 }
 
+@media (display-mode: standalone) {
+  html,
+  body {
+    overscroll-behavior-y: contain;
+  }
+}
+
+.pull-to-refresh-indicator {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 8px);
+  left: 50%;
+  z-index: 1200;
+  align-items: center;
+  padding: 7px 12px 8px;
+  border: 1px solid rgb(255 255 255 / 16%);
+  border-radius: 8px;
+  background: rgb(18 63 58 / 94%);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 22%);
+  backdrop-filter: blur(12px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.pull-to-refresh-ball {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  color: #123f3a;
+  background: #b7f56a;
+  border-radius: 50%;
+  place-items: center;
+}
+
 .rapi-splash {
   position: fixed;
   inset: 0;

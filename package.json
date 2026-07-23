@@ -1,0 +1,63 @@
+{
+  "name": "rapicancha",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "yarn@4.17.1",
+  "engines": {
+    "node": "^22.12.0 || >=24.0.0 <25",
+    "yarn": ">=4.17.1 <5"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "check:architecture": "node scripts/check-architecture.mjs",
+    "check": "yarn check:architecture && yarn typecheck && yarn build",
+    "audit:security": "yarn npm audit --severity high",
+    "db:push:phase1": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260720083500_phase_1_identity_multitenant_catalog.sql",
+    "db:push:phase1-business": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260720153000_phase_1_business_operations.sql",
+    "db:push:admin-management": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260720170000_admin_management_rls.sql",
+    "db:push:admin-geography": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260720173000_admin_geography_rls.sql",
+    "db:push:admin-sports": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260720180000_admin_sports_rls.sql",
+    "db:push:admin-operations": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260720200000_admin_operations_support.sql",
+    "db:push:normalize-plan-money": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260720210000_normalize_plan_minor_units.sql",
+    "db:push:lock-business-self-creation": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260720223000_lock_business_self_creation.sql",
+    "db:push:neutral-payment-providers": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260721110000_neutral_payment_providers.sql",
+    "db:push:fix-cop-minor-units": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260721113000_fix_cop_minor_units.sql",
+    "db:push:expire-old-pending-bookings": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260721114500_expire_old_pending_bookings.sql",
+    "db:push:enable-reservations-realtime": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260721115500_enable_reservations_realtime.sql",
+    "db:push:booking-hold-7-minutes": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260721120500_booking_hold_7_minutes.sql",
+    "db:check:phase1": "node scripts/check-supabase-phase1.mjs",
+    "supabase:login": "supabase login",
+    "functions:deploy:admin-users": "supabase functions deploy admin-users --project-ref nuktopommfdkqmpxtujb --use-api",
+    "functions:deploy:public-availability": "supabase functions deploy public-availability --project-ref nuktopommfdkqmpxtujb --use-api --no-verify-jwt",
+    "functions:deploy:create-booking-checkout": "supabase functions deploy create-booking-checkout --project-ref nuktopommfdkqmpxtujb --use-api --no-verify-jwt",
+    "functions:deploy:cancel-booking-checkout": "supabase functions deploy cancel-booking-checkout --project-ref nuktopommfdkqmpxtujb --use-api --no-verify-jwt",
+    "functions:deploy:epayco-webhook": "supabase functions deploy epayco-webhook --project-ref nuktopommfdkqmpxtujb --use-api --no-verify-jwt"
+  },
+  "dependencies": {
+    "@emotion/react": "11.14.0",
+    "@emotion/styled": "11.14.1",
+    "@mui/icons-material": "9.2.0",
+    "@mui/material": "9.2.0",
+    "@supabase/supabase-js": "2.110.7",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "react-router-dom": "7.18.0",
+    "zustand": "5.0.14"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "6.0.3",
+    "pg": "8.22.0",
+    "supabase": "2.109.1",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vite": "8.1.5",
+    "vite-plugin-pwa": "1.3.0"
+  }
+}

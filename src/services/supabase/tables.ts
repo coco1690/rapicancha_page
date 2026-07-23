@@ -1,0 +1,38 @@
+import type { Database } from '../../../supabase/types/database'
+
+type PublicSchema = Database['public']
+type Tables = PublicSchema['Tables']
+type Views = PublicSchema['Views']
+type Enums = PublicSchema['Enums']
+
+export type TableInsert<Name extends keyof Tables> = Tables[Name]['Insert']
+export type TableUpdate<Name extends keyof Tables> = Tables[Name]['Update']
+
+export type Cancha = Tables['canchas']['Row']
+export type CanchaTarifa = Tables['cancha_tarifas']['Row']
+export type AdminAuditoria = Tables['admin_auditoria']['Row']
+export type Ciudad = Tables['ciudades']['Row']
+export type Departamento = Tables['departamentos']['Row']
+export type Deporte = Tables['deportes']['Row']
+export type Negocio = Tables['negocios']['Row']
+export type Pais = Tables['paises']['Row']
+export type Plan = Tables['planes']['Row']
+export type Reserva = Tables['reservas']['Row']
+export type Equipo = Tables['equipos']['Row']
+export type InscripcionTorneo = Tables['inscripciones_torneo']['Row']
+export type JugadorEquipo = Tables['jugadores_equipo']['Row']
+export type Pago = Tables['pagos']['Row']
+export type Partido = Tables['partidos']['Row']
+export type SoporteCaso = Tables['soporte_casos']['Row']
+export type Torneo = Tables['torneos']['Row']
+export type Usuario = Tables['usuarios']['Row']
+
+export type MarketplaceCancha = Views['v_marketplace_canchas']['Row']
+export type PublicBusiness = Views['negocios_publicos']['Row']
+export type PublicCourt = Views['canchas_publicas']['Row']
+
+export type BookingStatus = Enums['booking_status']
+export type BookingOrigin = Enums['booking_origin']
+export type CanchaEstado = Enums['cancha_estado']
+export type NegocioEstado = Enums['negocio_estado']
+export type UserRole = Enums['user_role']

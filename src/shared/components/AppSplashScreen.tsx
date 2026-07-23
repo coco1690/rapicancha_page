@@ -24,7 +24,6 @@ export function AppSplashScreen() {
 
   return <Box aria-label="Cargando Rapicancha" className="rapi-splash" role="status">
     <Stack className="rapi-splash-content" spacing={3} sx={{ alignItems: 'center' }}>
-      <Box alt="Rapicancha" className="rapi-splash-logo" component="img" src="/logo-rapicancha-dark.png" />
       <Box className="rapi-ball-loader">
         {balls.map((ball, index) => <Box aria-label={ball.label} className={`rapi-loader-ball rapi-loader-ball-${index + 1}`} key={ball.label}>{ball.icon}</Box>)}
         <Box className="rapi-loader-center"><SportsSoccerRounded /></Box>

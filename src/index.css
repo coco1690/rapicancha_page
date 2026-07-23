@@ -29,12 +29,6 @@ html {
   animation: rapi-splash-content-in 500ms ease both;
 }
 
-.rapi-splash-logo {
-  width: min(72vw, 330px);
-  height: auto;
-  object-fit: contain;
-}
-
 .rapi-ball-loader {
   position: relative;
   width: 152px;

@@ -7,11 +7,11 @@ import { ThemeModeButton } from '../components/ThemeModeButton'
 export function PublicLayout() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <AppBar color="inherit" elevation={0} position="static" sx={{ borderBottom: 1, borderColor: 'divider' }}>
+      <AppBar color="inherit" elevation={0} position="sticky" sx={{ backdropFilter: 'blur(18px)', bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(18,24,23,.88)' : 'rgba(255,255,255,.9)', borderBottom: 1, borderColor: 'divider' }}>
         <Container maxWidth="lg">
-          <Toolbar disableGutters sx={{ minHeight: 68, justifyContent: 'space-between' }}>
+          <Toolbar disableGutters sx={{ minHeight: { xs: 60, sm: 68 }, justifyContent: 'space-between' }}>
             <Link aria-label="Ir al inicio de RapiCancha" style={{ display: 'inline-flex', textDecoration: 'none' }} to="/">
-              <BrandLogo height={44} width={190} />
+              <BrandLogo height={40} width={174} />
             </Link>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
               <ThemeModeButton />

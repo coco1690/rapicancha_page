@@ -1,7 +1,8 @@
-import { Google, SportsSoccer, Visibility, VisibilityOff } from '@mui/icons-material'
+import { Google, Visibility, VisibilityOff } from '@mui/icons-material'
 import { Box, Button, Checkbox, Container, Divider, FormControlLabel, IconButton, InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material'
 import type { FormEvent, ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { BrandLogo } from '../../../shared/components/BrandLogo'
 import { FeedbackAlert } from '../../../shared/components/FeedbackAlert'
 import { useAuthStore } from '../../../stores/useAuthStore'
 
@@ -57,7 +58,9 @@ export function AuthCard({ title, description, children }: { title: string; desc
       <Paper elevation={0} sx={{ borderRadius: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(420px, 520px) minmax(0, 1fr)' }, minHeight: { lg: 720 }, overflow: 'hidden', width: '100%', maxWidth: 1040 }}>
         <Box sx={{ alignItems: 'center', bgcolor: 'background.paper', display: 'flex', justifyContent: 'center', minHeight: { xs: 'calc(100vh - 32px)', sm: 620, lg: 720 }, px: { xs: 2.25, sm: 5, md: 7 }, py: { xs: 3, sm: 5, md: 7 } }}>
           <Stack spacing={{ xs: 3, sm: 4 }} sx={{ mx: 'auto', width: '100%', maxWidth: 430 }}>
-            <Typography component={Link} sx={{ alignItems: 'center', color: 'text.primary', display: 'inline-flex', fontSize: 24, fontWeight: 950, gap: 1, textDecoration: 'none', width: 'fit-content' }} to="/"><Box sx={{ bgcolor: 'secondary.main', borderRadius: '50%', color: 'primary.dark', display: 'grid', height: 34, placeItems: 'center', width: 34 }}><SportsSoccer fontSize="small" /></Box>Rapicancha</Typography>
+            <Box aria-label="Ir al inicio de RapiCancha" component={Link} sx={{ display: 'inline-flex', textDecoration: 'none', width: 'fit-content' }} to="/">
+              <BrandLogo height={50} width={216} />
+            </Box>
             <Box><Typography component="h1" sx={{ fontSize: { xs: 25, sm: 30 }, fontWeight: 950 }}>{title}</Typography><Typography color="text.secondary" sx={{ mt: 1 }}>{description}</Typography></Box>
             {children}
           </Stack>

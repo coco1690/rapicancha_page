@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
-import { Close, Logout, Menu, NotificationsNone, Search, SportsSoccer } from '@mui/icons-material'
+import { Close, Logout, Menu, NotificationsNone, Search } from '@mui/icons-material'
 import { AppBar, Avatar, Badge, Box, Chip, Divider, Drawer, IconButton, InputBase, List, ListItemButton, ListItemIcon, ListItemText, ListSubheader, Stack, Toolbar, Tooltip, Typography } from '@mui/material'
 import { Link, useLocation } from 'react-router-dom'
 import { useDashboardShellStore } from '../../stores/useDashboardShellStore'
+import { BrandLogo } from '../components/BrandLogo'
 import { ThemeModeButton } from '../components/ThemeModeButton'
 
 export type DashboardNavItem = { to: string; label: string; icon: ReactNode; group: 'Principal' | 'Gestion' }
@@ -32,9 +33,9 @@ export function DashboardShell({ areaLabel, navigation, profileName, profileSubt
 
   const sidebar = <Box sx={{ display: 'flex', height: '100%', flexDirection: 'column', bgcolor: 'background.paper' }}>
     <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', minHeight: 64, px: 2 }}>
-      <Stack direction="row" spacing={1.2} sx={{ alignItems: 'center' }}>
-        <Box sx={{ display: 'grid', width: 31, height: 31, placeItems: 'center', borderRadius: '50%', bgcolor: 'secondary.main', color: 'primary.dark' }}><SportsSoccer fontSize="small" /></Box>
-        <Box><Typography sx={{ fontSize: 18, fontWeight: 900, lineHeight: 1.1 }}>Rapicancha</Typography><Typography color="text.secondary" sx={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}>{areaLabel}</Typography></Box>
+      <Stack spacing={0.25}>
+        <BrandLogo height={38} width={164} />
+        <Typography color="text.secondary" sx={{ pl: 0.75, fontSize: 10, fontWeight: 800, textTransform: 'uppercase' }}>{areaLabel}</Typography>
       </Stack>
       <IconButton aria-label="Cerrar menu" onClick={closeMobile} sx={{ display: { md: 'none' } }}><Close /></IconButton>
     </Stack>

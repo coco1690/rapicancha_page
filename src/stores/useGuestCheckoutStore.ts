@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { checkoutRepository } from '../services/repositories/checkoutRepository'
 import { openEpaycoCheckout } from '../services/payments/epaycoCheckout'
 import { bookingHoldMs, clearPendingCheckout, findPendingCheckoutByReference, findPendingCheckoutForSlot, pendingCheckoutTimeLeftMs, savePendingCheckout } from '../services/payments/pendingCheckout'
+import type { BookingPaymentStatus } from '../services/repositories/checkoutRepository'
 
 type CheckoutForm = {
   customerName: string
@@ -31,9 +32,11 @@ type GuestCheckoutStore = {
   reference: string
   holdSecondsLeft: number
   hydrate: (context: Partial<CheckoutContext>) => void
-  hydrateReference: (reference: string) => void
+  hydrateReference: (reference: string) => Promise<BookingPaymentStatus | 'missing'>
   setField: <K extends keyof CheckoutForm>(field: K, value: CheckoutForm[K]) => void
   tickHold: () => void
+  reconcilePayment: (reference: string, providerResponse: unknown) => Promise<void>
+  finishProviderResponse: (reference: string, providerResponse: unknown) => Promise<void>
   submit: () => Promise<void>
   cancel: () => Promise<string>
 }
@@ -79,9 +82,44 @@ export const useGuestCheckoutStore = create<GuestCheckoutStore>((set, get) => ({
       message: pending ? 'Tienes un pago pendiente para este horario. Puedes continuarlo sin crear otra reserva.' : '',
     }
   }),
-  hydrateReference: (reference) => {
+  hydrateReference: async (reference) => {
     const pending = findPendingCheckoutByReference(reference)
-    set((state) => ({ context: pending ? contextFromPending(pending, emptyContext) : emptyContext, form: pending ? formFromPending(pending, state.form) : state.form, reference, holdSecondsLeft: holdSecondsFromPending(pending), error: pending ? '' : 'No encontramos una sesion de pago pendiente en este navegador.', message: pending ? 'Puedes continuar el pago pendiente.' : '' }))
+    set({ submitting: true, error: '', message: '' })
+    try {
+      const result = await checkoutRepository.fetchBookingPaymentStatus(reference)
+      if (result.status !== 'pending') {
+        clearPendingCheckout(reference)
+        set({
+          context: pending ? contextFromPending(pending, emptyContext) : emptyContext,
+          reference: '',
+          holdSecondsLeft: 0,
+          submitting: false,
+          message: result.status === 'confirmed' ? 'Esta reserva ya fue pagada y confirmada.' : '',
+          error: result.status === 'failed' ? 'Esta sesion de pago ya finalizo sin aprobacion.' : '',
+        })
+        return result.status
+      }
+      set((state) => ({
+        context: pending ? contextFromPending(pending, emptyContext) : emptyContext,
+        form: pending ? formFromPending(pending, state.form) : state.form,
+        reference: pending?.reference ?? '',
+        holdSecondsLeft: holdSecondsFromPending(pending),
+        submitting: false,
+        error: pending ? '' : 'No encontramos una sesion de pago pendiente en este navegador.',
+        message: pending ? 'Puedes continuar el pago pendiente.' : '',
+      }))
+      return pending ? 'pending' : 'missing'
+    } catch (error) {
+      set({
+        context: pending ? contextFromPending(pending, emptyContext) : emptyContext,
+        reference: pending?.reference ?? '',
+        holdSecondsLeft: holdSecondsFromPending(pending),
+        submitting: false,
+        error: pending ? '' : errorMessage(error),
+        message: pending ? 'Puedes continuar el pago pendiente.' : '',
+      })
+      return pending ? 'pending' : 'missing'
+    }
   },
   setField: (field, value) => set((state) => ({ form: { ...state.form, [field]: value } })),
   tickHold: () => {
@@ -93,6 +131,32 @@ export const useGuestCheckoutStore = create<GuestCheckoutStore>((set, get) => ({
     }
     set({ holdSecondsLeft: holdSecondsFromPending(pending), reference: pendingCheckoutTimeLeftMs(pending.createdAt) > 0 ? pending.reference : '' })
   },
+  reconcilePayment: async (reference, providerResponse) => {
+    try {
+      set({ submitting: true, error: '', message: 'Validando el pago aprobado con ePayco...' })
+      const result = await checkoutRepository.reconcileEpaycoPayment(reference, providerResponse)
+      if (result?.confirmed) {
+        clearPendingCheckout(reference)
+        set({ submitting: false, reference: '', holdSecondsLeft: 0, message: 'Pago aprobado. Tu reserva fue confirmada y el club ya fue notificado.' })
+        return
+      }
+      if (result?.status === 'failed' || result?.status === 'refunded') {
+        clearPendingCheckout(reference)
+        set({ submitting: false, reference: '', error: result.status === 'refunded' ? 'ePayco reporto que la transaccion fue reversada.' : 'ePayco reporto que la transaccion no fue aprobada.', message: '' })
+        return
+      }
+      set({ submitting: false, message: 'El pago aun esta pendiente de confirmacion en ePayco.' })
+    } catch (error) {
+      set({ submitting: false, error: errorMessage(error), message: '' })
+    }
+  },
+  finishProviderResponse: async (reference, providerResponse) => {
+    try {
+      await get().reconcilePayment(reference, providerResponse)
+    } finally {
+      window.location.assign(`/checkout/${encodeURIComponent(reference)}/respuesta`)
+    }
+  },
   submit: async () => {
     const state = get()
     set({ submitting: true, error: '', message: '' })
@@ -103,7 +167,8 @@ export const useGuestCheckoutStore = create<GuestCheckoutStore>((set, get) => ({
         await openEpaycoCheckout({
           sessionId: pending.sessionId,
           test: pending.test,
-          onClosed: () => set({ submitting: false, message: 'Checkout cerrado. Puedes volver y continuar el pago mientras el horario este retenido.' }),
+          onResponse: (providerResponse) => { void get().finishProviderResponse(pending.reference, providerResponse) },
+          onClosed: () => { if (findPendingCheckoutByReference(pending.reference)) set({ submitting: false, message: 'Checkout cerrado. Puedes volver y continuar el pago mientras el horario este retenido.' }); else set({ submitting: false }) },
           onError: (message) => set({ submitting: false, error: message }),
         })
         return
@@ -137,7 +202,8 @@ export const useGuestCheckoutStore = create<GuestCheckoutStore>((set, get) => ({
       await openEpaycoCheckout({
         sessionId: checkout.sessionId,
         test: checkout.test,
-        onClosed: () => set({ submitting: false, message: 'Checkout cerrado. Si pagaste, estamos confirmando tu reserva.' }),
+        onResponse: (providerResponse) => { void get().finishProviderResponse(checkout.reservationReference, providerResponse) },
+        onClosed: () => { if (findPendingCheckoutByReference(checkout.reservationReference)) set({ submitting: false, message: 'Checkout cerrado. Si pagaste, estamos confirmando tu reserva.' }); else set({ submitting: false }) },
         onError: (message) => set({ submitting: false, error: message }),
       })
     } catch (error) {

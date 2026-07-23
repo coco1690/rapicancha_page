@@ -198,9 +198,9 @@ async function createEpaycoSession(input: { amountMinor: number; currency: strin
     test: Deno.env.get('EPAYCO_ENV') !== 'production',
     ip: input.ip,
     invoice: input.providerInvoice,
-    ...(isPublicUrl(input.responseUrl) ? { response: input.responseUrl } : {}),
+    ...(isPublicUrl(input.responseUrl) ? { response: input.responseUrl, forceResponse: true } : {}),
     confirmation: input.confirmationUrl,
-    method: 'POST',
+    method: 'GET',
     extras: { extra1: input.reference, extra2: 'rapicancha', extra3: 'reserva' },
     billing: {
       email: input.customerEmail || undefined,

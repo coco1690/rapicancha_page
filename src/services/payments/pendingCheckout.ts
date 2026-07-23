@@ -35,6 +35,11 @@ export function findPendingCheckoutByReference(reference: string) {
   return activePendingCheckouts().find((item) => item.reference === reference) ?? null
 }
 
+export function findPendingCheckoutsForCourts(courtIds: string[]) {
+  const allowedCourts = new Set(courtIds)
+  return activePendingCheckouts().filter((item) => allowedCourts.has(item.courtId))
+}
+
 export function clearPendingCheckout(reference: string) {
   localStorage.setItem(storageKey, JSON.stringify(activePendingCheckouts().filter((item) => item.reference !== reference)))
 }

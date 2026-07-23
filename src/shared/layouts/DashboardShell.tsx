@@ -15,13 +15,14 @@ type DashboardShellProps = {
   profileSubtitle: string
   status?: string
   onSignOut: () => Promise<void>
+  notificationCount?: number
   alert?: ReactNode
   children: ReactNode
 }
 
 const sidebarWidth = 250
 
-export function DashboardShell({ areaLabel, navigation, profileName, profileSubtitle, status, onSignOut, alert, children }: DashboardShellProps) {
+export function DashboardShell({ areaLabel, navigation, profileName, profileSubtitle, status, onSignOut, notificationCount = 0, alert, children }: DashboardShellProps) {
   const mobileOpen = useDashboardShellStore((state) => state.mobileOpen)
   const search = useDashboardShellStore((state) => state.search)
   const openMobile = useDashboardShellStore((state) => state.openMobile)
@@ -67,7 +68,7 @@ export function DashboardShell({ areaLabel, navigation, profileName, profileSubt
         <Box sx={{ flex: 1 }} />
         {status && <Chip label={status} size="small" sx={{ display: { xs: 'none', sm: 'inline-flex' } }} />}
         <ThemeModeButton />
-        <Tooltip title="Notificaciones"><IconButton aria-label="Notificaciones"><Badge color="error" variant="dot"><NotificationsNone /></Badge></IconButton></Tooltip>
+        <Tooltip title={notificationCount ? `${notificationCount} notificaciones sin leer` : 'Notificaciones'}><IconButton aria-label="Notificaciones"><Badge badgeContent={notificationCount || undefined} color="error" max={99}><NotificationsNone /></Badge></IconButton></Tooltip>
         <Avatar sx={{ width: 34, height: 34, bgcolor: 'secondary.main', color: 'primary.dark', fontSize: 13, fontWeight: 900 }}>{profileName.slice(0, 1).toUpperCase()}</Avatar>
       </Toolbar>
     </AppBar>

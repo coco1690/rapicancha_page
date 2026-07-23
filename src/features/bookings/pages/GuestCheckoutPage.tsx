@@ -37,8 +37,17 @@ export function GuestCheckoutPage() {
       })
       return
     }
-    hydrateReference(bookingReference)
-  }, [hydrate, hydrateReference, params.bookingReference, searchParams])
+    const verifyReference = () => {
+      void hydrateReference(bookingReference).then((status) => {
+        if (status !== 'pending' && status !== 'missing') {
+          navigate(`/checkout/${encodeURIComponent(bookingReference)}/respuesta`, { replace: true })
+        }
+      })
+    }
+    verifyReference()
+    window.addEventListener('pageshow', verifyReference)
+    return () => window.removeEventListener('pageshow', verifyReference)
+  }, [hydrate, hydrateReference, navigate, params.bookingReference, searchParams])
 
   useEffect(() => {
     tickHold()

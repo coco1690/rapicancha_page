@@ -15,14 +15,15 @@ export const businessRepository = {
     const businessResult = await db.from('negocios').select('*').eq('dueno_id', userId).order('creado_en', { ascending: true }).limit(1).maybeSingle()
     if (businessResult.error) throw businessResult.error
     const business = businessResult.data
-    if (!business) return { business: null, plan: null, courts: [], reservations: [] }
-    const [planResult, courtsResult, reservationsResult] = await Promise.all([
+    if (!business) return { business: null, plan: null, courts: [], reservations: [], notifications: [] }
+    const [planResult, courtsResult, reservationsResult, notificationsResult] = await Promise.all([
       db.from('planes').select('*').eq('id', business.plan_id).maybeSingle(),
       db.from('canchas').select('*, deportes(nombre, slug)').eq('negocio_id', business.id).order('creado_en'),
       db.from('reservas').select('*, canchas(nombre)').eq('negocio_id', business.id).order('inicio_at', { ascending: true }),
+      db.from('notificaciones_negocio').select('*').eq('negocio_id', business.id).order('creado_en', { ascending: false }).limit(30),
     ])
-    if (planResult.error || courtsResult.error || reservationsResult.error) throw planResult.error || courtsResult.error || reservationsResult.error
-    return { business, plan: planResult.data, courts: courtsResult.data, reservations: reservationsResult.data }
+    if (planResult.error || courtsResult.error || reservationsResult.error || notificationsResult.error) throw planResult.error || courtsResult.error || reservationsResult.error || notificationsResult.error
+    return { business, plan: planResult.data, courts: courtsResult.data, reservations: reservationsResult.data, notifications: notificationsResult.data ?? [] }
   },
   fetchCatalogs: async () => {
     const db = client()
@@ -62,6 +63,17 @@ export const businessRepository = {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reservas', filter: `negocio_id=eq.${businessId}` }, onChange)
       .subscribe()
     return () => { void client().removeChannel(channel) }
+  },
+  subscribeToBusinessNotifications: (businessId: string, onChange: (eventType?: string) => void) => {
+    const channel = client()
+      .channel(`notificaciones:negocio:${businessId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notificaciones_negocio', filter: `negocio_id=eq.${businessId}` }, (payload) => onChange(payload.eventType))
+      .subscribe()
+    return () => { void client().removeChannel(channel) }
+  },
+  markNotificationRead: async (id: string) => {
+    const { error } = await client().from('notificaciones_negocio').update({ leida: true }).eq('id', id)
+    if (error) throw error
   },
   updateUser: async (id: string, values: TableUpdate<'usuarios'>) => {
     const { error } = await client().from('usuarios').update(values).eq('id', id)

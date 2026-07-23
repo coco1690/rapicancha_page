@@ -17,11 +17,12 @@ declare global {
 
 let scriptPromise: Promise<void> | null = null
 
-export async function openEpaycoCheckout(input: { sessionId: string; test: boolean; onClosed: () => void; onError: (message: string) => void }) {
+export async function openEpaycoCheckout(input: { sessionId: string; test: boolean; onResponse: (data: unknown) => void; onClosed: () => void; onError: (message: string) => void }) {
   await loadEpaycoScript()
   const checkout = window.ePayco?.checkout.configure({ sessionId: input.sessionId, type: 'onpage', test: input.test })
   if (!checkout) throw new Error('No se pudo inicializar ePayco.')
   checkout.setHooks({
+    onResponse: input.onResponse,
     onErrors: () => input.onError('ePayco reporto un error al abrir el pago.'),
     onClosed: input.onClosed,
   })

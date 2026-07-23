@@ -4,6 +4,8 @@ import { PublicLayout } from '../shared/layouts/PublicLayout'
 import { MarketplacePage } from '../features/marketplace/pages/MarketplacePage'
 import { BusinessDetailPage } from '../features/businesses/pages/BusinessDetailPage'
 import { GuestCheckoutPage } from '../features/bookings/pages/GuestCheckoutPage'
+import { BookingPaymentResultPage } from '../features/bookings/pages/BookingPaymentResultPage'
+import { EpaycoResponsePage } from '../features/bookings/pages/EpaycoResponsePage'
 import { BusinessDashboardPage } from '../features/business-dashboard/pages/BusinessDashboardPage'
 import { NotFoundPage } from '../shared/pages/NotFoundPage'
 import { LoginPage } from '../features/auth/pages/LoginPage'
@@ -40,6 +42,8 @@ export function AppRouter() {
         <Route index element={<MarketplacePage />} />
         <Route path="negocios/:slug" element={<BusinessDetailPage />} />
         <Route path="checkout/:bookingReference" element={<GuestCheckoutPage />} />
+        <Route path="checkout/:bookingReference/respuesta" element={<BookingPaymentResultPage />} />
+        <Route path="pago/respuesta" element={<EpaycoResponsePage />} />
         <Route path="404" element={<NotFoundPage />} />
       </Route>
 

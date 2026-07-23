@@ -22,14 +22,30 @@ export function BusinessDetailPage() {
   const selectedCourtId = useBusinessStore((state) => state.publicSelectedCourtId)
   const selectedSlotTime = useBusinessStore((state) => state.publicSelectedSlotTime)
   const selectedDateLabel = useBusinessStore((state) => state.publicSelectedDateLabel)
+  useBusinessStore((state) => state.publicPendingRevision)
   const load = useBusinessStore((state) => state.loadPublicBusiness)
+  const syncPendingCheckouts = useBusinessStore((state) => state.syncPublicPendingCheckouts)
   const setSelectedDate = useBusinessStore((state) => state.setPublicSelectedDate)
   const setSelectedSlotTime = useBusinessStore((state) => state.setPublicSelectedSlotTime)
   const openSchedule = useBusinessStore((state) => state.openPublicSchedule)
   const closeSchedule = useBusinessStore((state) => state.closePublicSchedule)
   const slotsForCourt = useBusinessStore((state) => state.publicSlotsForCourt)
 
-  useEffect(() => { if (params.slug) void load(params.slug) }, [load, params.slug])
+  useEffect(() => {
+    if (!params.slug) return
+    void load(params.slug).then(syncPendingCheckouts)
+  }, [load, params.slug, syncPendingCheckouts])
+
+  useEffect(() => {
+    const refreshRestoredPage = () => { void syncPendingCheckouts() }
+    const refreshVisiblePage = () => { if (document.visibilityState === 'visible') void syncPendingCheckouts() }
+    window.addEventListener('pageshow', refreshRestoredPage)
+    document.addEventListener('visibilitychange', refreshVisiblePage)
+    return () => {
+      window.removeEventListener('pageshow', refreshRestoredPage)
+      document.removeEventListener('visibilitychange', refreshVisiblePage)
+    }
+  }, [syncPendingCheckouts])
 
   if (loading) return <PublicLoading />
   if (error) return <Container maxWidth="sm" sx={{ py: 8 }}><Typography color="error" sx={{ fontWeight: 800 }}>{error}</Typography></Container>

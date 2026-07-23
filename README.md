@@ -45,6 +45,16 @@ Las reservas de invitados, los pagos y cualquier operacion privilegiada se
 implementaran mediante Edge Functions; el navegador no escribira directamente
 en tablas sensibles.
 
+Para que ePayco redirija al cliente a la pantalla propia de confirmacion en un
+entorno publicado, configura `APP_PUBLIC_URL` como secreto de las Edge Functions
+con una URL HTTPS accesible publicamente. En desarrollo local, el hook del
+checkout realiza la navegacion dentro de la aplicacion.
+
+La URL global de respuesta para el panel de ePayco es
+`https://rapicancha.com/pago/respuesta`. Las credenciales privadas de ePayco
+permanecen en Supabase; Vercel solo necesita las variables publicas
+`VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`.
+
 Consulta tambien:
 
 - `docs/ARCHITECTURE.md`

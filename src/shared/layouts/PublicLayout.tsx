@@ -1,4 +1,5 @@
-import { AppBar, Box, Button, Container, Stack, Toolbar } from '@mui/material'
+import { PersonOutlined } from '@mui/icons-material'
+import { AppBar, Box, Container, IconButton, Stack, Toolbar } from '@mui/material'
 import { Link, Outlet } from 'react-router-dom'
 import { BrandLogo } from '../components/BrandLogo'
 import { ThemeModeButton } from '../components/ThemeModeButton'
@@ -14,7 +15,7 @@ export function PublicLayout() {
             </Link>
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
               <ThemeModeButton />
-              <Button component={Link} to="/acceso" variant="contained">Soy un club</Button>
+              <IconButton aria-label="Acceso para clubes" component={Link} color="primary" title="Acceso para clubes" to="/acceso"><PersonOutlined /></IconButton>
             </Stack>
           </Toolbar>
         </Container>

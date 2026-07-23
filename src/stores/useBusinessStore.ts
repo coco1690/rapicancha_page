@@ -1,7 +1,10 @@
 import type { User } from '@supabase/supabase-js'
 import { create } from 'zustand'
 import { businessRepository } from '../services/repositories/businessRepository'
-import type { Cancha, CanchaTarifa, Ciudad, Departamento, Deporte, Negocio, Pais, Plan, PublicBusiness, PublicCourt, Reserva, Usuario } from '../services/supabase/tables'
+import { playBookingNotificationSound } from '../services/notifications/notificationSound'
+import { checkoutRepository } from '../services/repositories/checkoutRepository'
+import { clearPendingCheckout, findPendingCheckoutsForCourts } from '../services/payments/pendingCheckout'
+import type { BusinessNotification, Cancha, CanchaTarifa, Ciudad, Departamento, Deporte, Negocio, Pais, Plan, PublicBusiness, PublicCourt, Reserva, Usuario } from '../services/supabase/tables'
 import { majorToMinor, minorToMajor } from '../shared/lib/money'
 
 export type CourtWithSport = Cancha & { deportes: { nombre: string; slug: string } | null }
@@ -69,16 +72,16 @@ const getTrialStatus = (business: Negocio | null): TrialStatus => {
 }
 
 type BusinessState = {
-  business: Negocio | null; plan: Plan | null; courts: CourtWithSport[]; reservations: ReservationWithCourt[]
+  business: Negocio | null; plan: Plan | null; courts: CourtWithSport[]; reservations: ReservationWithCourt[]; notifications: BusinessNotification[]; unreadNotifications: number
   countries: Pais[]; departments: Departamento[]; cities: Ciudad[]; plans: Plan[]; sports: Deporte[]
   loading: boolean; catalogsLoading: boolean; saving: boolean; busyId: string; error: string | null; message: string
   profileForm: BusinessProfileForm; courtForm: CourtForm; editingCourt: CourtWithSport | null; courtFormOpen: boolean
   selectedMonth: string; selectedCourt: string; reservationMode: 'list' | 'calendar'
   trialStatus: TrialStatus
-  publicBusiness: PublicBusiness | null; publicCourts: PublicCourt[]; publicRates: CanchaTarifa[]; publicLoading: boolean; publicAvailabilityLoading: boolean; publicAvailabilityError: string; publicAvailability: PublicAvailabilityByKey; publicSelectedDate: string; publicSelectedCourtId: string; publicSelectedSlotTime: string
-  publicSlotsForCourt: (court: PublicCourt) => PublicCourtSlot[]; publicSelectedDateLabel: () => string; setPublicSelectedDate: (date: string) => Promise<void>; openPublicSchedule: (courtId: string) => Promise<void>; closePublicSchedule: () => void; setPublicSelectedSlotTime: (time: string) => void; loadPublicAvailability: (courtId: string, date: string) => Promise<void>
+  publicBusiness: PublicBusiness | null; publicCourts: PublicCourt[]; publicRates: CanchaTarifa[]; publicLoading: boolean; publicAvailabilityLoading: boolean; publicAvailabilityError: string; publicAvailability: PublicAvailabilityByKey; publicSelectedDate: string; publicSelectedCourtId: string; publicSelectedSlotTime: string; publicPendingRevision: number
+  publicSlotsForCourt: (court: PublicCourt) => PublicCourtSlot[]; publicSelectedDateLabel: () => string; setPublicSelectedDate: (date: string) => Promise<void>; openPublicSchedule: (courtId: string) => Promise<void>; closePublicSchedule: () => void; setPublicSelectedSlotTime: (time: string) => void; loadPublicAvailability: (courtId: string, date: string, force?: boolean) => Promise<void>; syncPublicPendingCheckouts: () => Promise<void>
   load: (userId: string) => Promise<void>; refresh: (userId: string) => Promise<void>; clear: () => void
-  subscribeReservationsRealtime: (userId: string) => () => void
+  subscribeReservationsRealtime: (userId: string) => () => void; markNotificationRead: (id: string) => Promise<void>
   loadPublicBusiness: (slug: string) => Promise<void>
   loadCatalogs: () => Promise<void>; hydrateProfileForm: (user: User | null, profile: Usuario | null) => void
   setProfileField: (field: keyof BusinessProfileForm, value: string) => void; selectCountry: (id: string) => void; selectDepartment: (id: string) => void
@@ -89,19 +92,23 @@ type BusinessState = {
 }
 
 export const useBusinessStore = create<BusinessState>((set, get) => ({
-  business: null, plan: null, courts: [], reservations: [], countries: [], departments: [], cities: [], plans: [], sports: [],
+  business: null, plan: null, courts: [], reservations: [], notifications: [], unreadNotifications: 0, countries: [], departments: [], cities: [], plans: [], sports: [],
   loading: false, catalogsLoading: false, saving: false, busyId: '', error: null, message: '', profileForm: emptyProfile,
   trialStatus: getTrialStatus(null),
-  publicBusiness: null, publicCourts: [], publicRates: [], publicLoading: false, publicAvailabilityLoading: false, publicAvailabilityError: '', publicAvailability: {}, publicSelectedDate: todayKey(), publicSelectedCourtId: '', publicSelectedSlotTime: '',
+  publicBusiness: null, publicCourts: [], publicRates: [], publicLoading: false, publicAvailabilityLoading: false, publicAvailabilityError: '', publicAvailability: {}, publicSelectedDate: todayKey(), publicSelectedCourtId: '', publicSelectedSlotTime: '', publicPendingRevision: 0,
   courtForm: emptyCourt, editingCourt: null, courtFormOpen: false, selectedMonth: new Date().toISOString().slice(0, 7), selectedCourt: 'all', reservationMode: 'list',
-  load: async (userId) => { set({ loading: true, error: null }); try { const data = await businessRepository.fetchDashboard(userId) as { business: Negocio | null; plan: Plan | null; courts: CourtWithSport[]; reservations: ReservationWithCourt[] }; set({ ...data, trialStatus: getTrialStatus(data.business), loading: false }) } catch (error) { set({ loading: false, error: errorMessage(error, 'No se pudo cargar el negocio.') }) } },
-  refresh: async (userId) => { try { const data = await businessRepository.fetchDashboard(userId) as { business: Negocio | null; plan: Plan | null; courts: CourtWithSport[]; reservations: ReservationWithCourt[] }; set({ ...data, trialStatus: getTrialStatus(data.business), error: null }) } catch (error) { set({ error: errorMessage(error, 'No se pudo actualizar el negocio.') }) } },
+  load: async (userId) => { set({ loading: true, error: null }); try { const data = await businessRepository.fetchDashboard(userId) as { business: Negocio | null; plan: Plan | null; courts: CourtWithSport[]; reservations: ReservationWithCourt[]; notifications: BusinessNotification[] }; set({ ...data, unreadNotifications: data.notifications.filter((item) => !item.leida).length, trialStatus: getTrialStatus(data.business), loading: false }) } catch (error) { set({ loading: false, error: errorMessage(error, 'No se pudo cargar el negocio.') }) } },
+  refresh: async (userId) => { try { const data = await businessRepository.fetchDashboard(userId) as { business: Negocio | null; plan: Plan | null; courts: CourtWithSport[]; reservations: ReservationWithCourt[]; notifications: BusinessNotification[] }; set({ ...data, unreadNotifications: data.notifications.filter((item) => !item.leida).length, trialStatus: getTrialStatus(data.business), error: null }) } catch (error) { set({ error: errorMessage(error, 'No se pudo actualizar el negocio.') }) } },
   subscribeReservationsRealtime: (userId) => {
     const businessId = get().business?.id
     if (!businessId) return () => undefined
-    return businessRepository.subscribeToBusinessReservations(businessId, () => { void get().refresh(userId) })
+    const refresh = () => { void get().refresh(userId) }
+    const unsubscribeReservations = businessRepository.subscribeToBusinessReservations(businessId, refresh)
+    const unsubscribeNotifications = businessRepository.subscribeToBusinessNotifications(businessId, (eventType) => { if (eventType === 'INSERT') playBookingNotificationSound(); refresh() })
+    return () => { unsubscribeReservations(); unsubscribeNotifications() }
   },
-  clear: () => set({ business: null, plan: null, courts: [], reservations: [], trialStatus: getTrialStatus(null), loading: false, error: null }),
+  markNotificationRead: async (id) => { await businessRepository.markNotificationRead(id); set((state) => ({ notifications: state.notifications.map((item) => item.id === id ? { ...item, leida: true } : item), unreadNotifications: state.notifications.filter((item) => item.id !== id && !item.leida).length })) },
+  clear: () => set({ business: null, plan: null, courts: [], reservations: [], notifications: [], unreadNotifications: 0, trialStatus: getTrialStatus(null), loading: false, error: null }),
   clearFeedback: () => set({ error: null, message: '' }),
   loadCatalogs: async () => { set({ catalogsLoading: true }); try { set({ ...(await businessRepository.fetchCatalogs()), catalogsLoading: false }) } catch (error) { set({ catalogsLoading: false, error: errorMessage(error, 'No se pudieron cargar los catalogos.') }) } },
   hydrateProfileForm: (user, profile) => {
@@ -157,15 +164,33 @@ export const useBusinessStore = create<BusinessState>((set, get) => ({
       set({ publicBusiness: null, publicCourts: [], publicRates: [], publicAvailability: {}, publicAvailabilityError: '', publicSelectedCourtId: '', publicSelectedSlotTime: '', publicLoading: false, error: errorMessage(error, 'No se pudo cargar la pagina del negocio.') })
     }
   },
-  loadPublicAvailability: async (courtId, date) => {
+  loadPublicAvailability: async (courtId, date, force = false) => {
     const key = availabilityKey(courtId, date)
-    if (get().publicAvailability[key]) return
+    if (!force && get().publicAvailability[key]) return
     set({ publicAvailabilityLoading: true, publicAvailabilityError: '' })
     try {
       const data = await businessRepository.fetchPublicAvailability(courtId, date)
       set((state) => ({ publicAvailability: { ...state.publicAvailability, [key]: data.slots }, publicAvailabilityLoading: false }))
     } catch (error) {
       set({ publicAvailabilityLoading: false, publicAvailabilityError: errorMessage(error, 'No se pudo cargar la disponibilidad.') })
+    }
+  },
+  syncPublicPendingCheckouts: async () => {
+    const state = get()
+    const courtIds = state.publicCourts.map((court) => court.id).filter((id): id is string => Boolean(id))
+    const pendingCheckouts = findPendingCheckoutsForCourts(courtIds)
+    await Promise.all(pendingCheckouts.map(async (pending) => {
+      try {
+        const result = await checkoutRepository.fetchBookingPaymentStatus(pending.reference)
+        if (result.status !== 'pending') clearPendingCheckout(pending.reference)
+      } catch {
+        // La disponibilidad del servidor sigue siendo la fuente final si la consulta individual falla.
+      }
+    }))
+    const current = get()
+    set((latest) => ({ publicAvailability: {}, publicPendingRevision: latest.publicPendingRevision + 1 }))
+    if (current.publicSelectedCourtId) {
+      await get().loadPublicAvailability(current.publicSelectedCourtId, current.publicSelectedDate, true)
     }
   },
   setPublicSelectedDate: async (publicSelectedDate) => {

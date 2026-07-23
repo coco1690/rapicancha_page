@@ -730,6 +730,71 @@ export type Database = {
           },
         ]
       }
+      notificaciones_negocio: {
+        Row: {
+          creado_en: string
+          datos: Json
+          id: string
+          leida: boolean
+          mensaje: string
+          negocio_id: string
+          reserva_id: string | null
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          creado_en?: string
+          datos?: Json
+          id?: string
+          leida?: boolean
+          mensaje: string
+          negocio_id: string
+          reserva_id?: string | null
+          tipo: string
+          titulo: string
+        }
+        Update: {
+          creado_en?: string
+          datos?: Json
+          id?: string
+          leida?: boolean
+          mensaje?: string
+          negocio_id?: string
+          reserva_id?: string | null
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notificaciones_negocio_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notificaciones_negocio_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios_publicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notificaciones_negocio_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "v_marketplace_canchas"
+            referencedColumns: ["negocio_id"]
+          },
+          {
+            foreignKeyName: "notificaciones_negocio_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pagos: {
         Row: {
           actualizado_en: string
@@ -1348,10 +1413,10 @@ export type Database = {
           estado: Database["public"]["Enums"]["subscription_status"]
           id: string
           negocio_id: string
+          payment_provider: string
           periodo_fin: string
           periodo_inicio: string
           plan_id: string
-          payment_provider: string
           provider_subscription_id: string | null
           stripe_subscription_id: string
         }
@@ -1361,10 +1426,10 @@ export type Database = {
           estado: Database["public"]["Enums"]["subscription_status"]
           id?: string
           negocio_id: string
+          payment_provider?: string
           periodo_fin: string
           periodo_inicio: string
           plan_id: string
-          payment_provider?: string
           provider_subscription_id?: string | null
           stripe_subscription_id: string
         }
@@ -1374,10 +1439,10 @@ export type Database = {
           estado?: Database["public"]["Enums"]["subscription_status"]
           id?: string
           negocio_id?: string
+          payment_provider?: string
           periodo_fin?: string
           periodo_inicio?: string
           plan_id?: string
-          payment_provider?: string
           provider_subscription_id?: string | null
           stripe_subscription_id?: string
         }

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { CalendarMonthOutlined, DashboardOutlined, SettingsOutlined, SportsSoccerOutlined } from '@mui/icons-material'
-import { Alert } from '@mui/material'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Alert, Button } from '@mui/material'
+import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/useAuthStore'
 import { useBusinessStore } from '../../stores/useBusinessStore'
 import { LoadingScreen } from '../components/LoadingScreen'
@@ -21,6 +21,9 @@ export function BusinessLayout() {
   const business = useBusinessStore((state) => state.business)
   const loading = useBusinessStore((state) => state.loading)
   const error = useBusinessStore((state) => state.error)
+  const notifications = useBusinessStore((state) => state.notifications)
+  const unreadNotifications = useBusinessStore((state) => state.unreadNotifications)
+  const markNotificationRead = useBusinessStore((state) => state.markNotificationRead)
   const load = useBusinessStore((state) => state.load)
   const clear = useBusinessStore((state) => state.clear)
   const subscribeReservationsRealtime = useBusinessStore((state) => state.subscribeReservationsRealtime)
@@ -34,5 +37,7 @@ export function BusinessLayout() {
   const handleSignOut = async () => { await signOut(); navigate('/acceso', { replace: true }) }
   if (loading) return <LoadingScreen label="Cargando panel..." />
 
-  return <DashboardShell areaLabel="Negocio" navigation={navigation} profileName={profile?.nombre || user?.email || 'Usuario'} profileSubtitle={business?.nombre || 'Configuracion pendiente'} status={business?.estado || 'Sin negocio'} onSignOut={handleSignOut} alert={error ? <Alert severity="error" square>{error}</Alert> : null}><Outlet /></DashboardShell>
+  const latestNotification = notifications.find((item) => !item.leida)
+  const banner = error ? <Alert severity="error" square>{error}</Alert> : latestNotification ? <Alert severity="info" sx={{ borderRadius: 0 }} action={<Button component={Link} color="inherit" onClick={() => void markNotificationRead(latestNotification.id)} size="small" to="/negocio/reservas">Ver reservas</Button>}><strong>{latestNotification.titulo}:</strong> {latestNotification.mensaje}</Alert> : null
+  return <DashboardShell areaLabel="Negocio" navigation={navigation} profileName={profile?.nombre || user?.email || 'Usuario'} profileSubtitle={business?.nombre || 'Configuracion pendiente'} status={business?.estado || 'Sin negocio'} notificationCount={unreadNotifications} onSignOut={handleSignOut} alert={banner}><Outlet /></DashboardShell>
 }

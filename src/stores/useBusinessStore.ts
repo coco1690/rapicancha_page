@@ -6,6 +6,7 @@ import { checkoutRepository } from '../services/repositories/checkoutRepository'
 import { clearPendingCheckout, findPendingCheckoutsForCourts } from '../services/payments/pendingCheckout'
 import type { BusinessNotification, Cancha, CanchaTarifa, Ciudad, Departamento, Deporte, Negocio, Pais, Plan, PublicBusiness, PublicCourt, Reserva, Usuario } from '../services/supabase/tables'
 import { majorToMinor, minorToMajor } from '../shared/lib/money'
+import { splitPhone, toE164 } from '../shared/lib/phone'
 
 export type CourtWithSport = Cancha & { deportes: { nombre: string; slug: string } | null }
 export type ReservationWithCourt = Reserva & { canchas: { nombre: string } | null }
@@ -13,13 +14,14 @@ export type TrialStatus = { active: boolean; expiresAt: string; formattedDate: s
 export type PublicCourtSlot = { time: string; endTime: string; label: string; priceMinor: number; currency: string; available?: boolean }
 type PublicAvailabilityByKey = Record<string, PublicCourtSlot[]>
 export type BusinessProfileForm = {
-  ownerName: string; ownerPhone: string; name: string; description: string; phone: string; email: string
+  ownerName: string; ownerPhone: string; ownerPhoneCountryCode: string; name: string; description: string; phone: string; phoneCountryCode: string; email: string
   address: string; countryId: string; departmentId: string; cityId: string; departmentText: string
   cityText: string; currency: string; timezone: string; openingTime: string; closingTime: string; logoUrl: string
+  whatsappPhone: string; whatsappCountryCode: string; whatsappNotificationsActive: boolean
 }
 export type CourtForm = { name: string; sportId: string; description: string; capacity: string; surface: string; price: string; covered: boolean; lighting: boolean }
 
-const emptyProfile: BusinessProfileForm = { ownerName: '', ownerPhone: '', name: '', description: '', phone: '', email: '', address: '', countryId: '', departmentId: '', cityId: '', departmentText: '', cityText: '', currency: 'COP', timezone: 'America/Bogota', openingTime: '06:00', closingTime: '23:00', logoUrl: '' }
+const emptyProfile: BusinessProfileForm = { ownerName: '', ownerPhone: '', ownerPhoneCountryCode: 'CO', name: '', description: '', phone: '', phoneCountryCode: 'CO', email: '', address: '', countryId: '', departmentId: '', cityId: '', departmentText: '', cityText: '', currency: 'COP', timezone: 'America/Bogota', openingTime: '06:00', closingTime: '23:00', logoUrl: '', whatsappPhone: '', whatsappCountryCode: 'CO', whatsappNotificationsActive: false }
 const emptyCourt: CourtForm = { name: '', sportId: '', description: '', capacity: '', surface: '', price: '', covered: false, lighting: true }
 const errorMessage = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback
 const slugify = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
@@ -84,7 +86,7 @@ type BusinessState = {
   subscribeReservationsRealtime: (userId: string) => () => void; markNotificationRead: (id: string) => Promise<void>
   loadPublicBusiness: (slug: string) => Promise<void>
   loadCatalogs: () => Promise<void>; hydrateProfileForm: (user: User | null, profile: Usuario | null) => void
-  setProfileField: (field: keyof BusinessProfileForm, value: string) => void; selectCountry: (id: string) => void; selectDepartment: (id: string) => void
+  setProfileField: <K extends keyof BusinessProfileForm>(field: K, value: BusinessProfileForm[K]) => void; selectCountry: (id: string) => void; selectDepartment: (id: string) => void
   saveProfile: (user: User, refreshProfile: () => Promise<void>) => Promise<void>
   openCourtCreate: () => void; openCourtEdit: (court: CourtWithSport) => void; closeCourtForm: () => void
   setCourtField: <K extends keyof CourtForm>(field: K, value: CourtForm[K]) => void; saveCourt: (userId: string) => Promise<void>; toggleCourt: (court: CourtWithSport, userId: string) => Promise<void>
@@ -115,20 +117,30 @@ export const useBusinessStore = create<BusinessState>((set, get) => ({
     const { business, countries, cities } = get()
     const country = countries.find((item) => item.codigo_iso2 === business?.pais_codigo)
     const city = cities.find((item) => item.id === business?.ciudad_id)
-    set({ profileForm: { ownerName: profile?.nombre ?? '', ownerPhone: profile?.telefono ?? '', name: business?.nombre ?? '', description: business?.descripcion ?? '', phone: business?.telefono ?? '', email: business?.email ?? user?.email ?? '', address: business?.direccion ?? '', countryId: country?.id ?? '', departmentId: city?.departamento_id ?? '', cityId: business?.ciudad_id ?? '', departmentText: business?.departamento ?? '', cityText: business?.ciudad ?? '', currency: business?.moneda_codigo ?? business?.moneda ?? country?.moneda_codigo ?? 'COP', timezone: business?.zona_horaria ?? business?.timezone ?? country?.zona_horaria_default ?? 'America/Bogota', openingTime: business?.horario_apertura?.slice(0, 5) ?? '06:00', closingTime: business?.horario_cierre?.slice(0, 5) ?? '23:00', logoUrl: business?.logo_url ?? '' } })
+    const fallbackCountryCode = country?.codigo_iso2 ?? 'CO'
+    const ownerPhone = splitPhone(profile?.telefono, countries, fallbackCountryCode)
+    const businessPhone = splitPhone(business?.telefono, countries, fallbackCountryCode)
+    const whatsappPhone = splitPhone(business?.whatsapp_telefono_e164, countries, fallbackCountryCode)
+    set({ profileForm: { ownerName: profile?.nombre ?? '', ownerPhone: ownerPhone.nationalPhone, ownerPhoneCountryCode: ownerPhone.countryCode, name: business?.nombre ?? '', description: business?.descripcion ?? '', phone: businessPhone.nationalPhone, phoneCountryCode: businessPhone.countryCode, email: business?.email ?? user?.email ?? '', address: business?.direccion ?? '', countryId: country?.id ?? '', departmentId: city?.departamento_id ?? '', cityId: business?.ciudad_id ?? '', departmentText: business?.departamento ?? '', cityText: business?.ciudad ?? '', currency: business?.moneda_codigo ?? business?.moneda ?? country?.moneda_codigo ?? 'COP', timezone: business?.zona_horaria ?? business?.timezone ?? country?.zona_horaria_default ?? 'America/Bogota', openingTime: business?.horario_apertura?.slice(0, 5) ?? '06:00', closingTime: business?.horario_cierre?.slice(0, 5) ?? '23:00', logoUrl: business?.logo_url ?? '', whatsappPhone: whatsappPhone.nationalPhone, whatsappCountryCode: whatsappPhone.countryCode, whatsappNotificationsActive: business?.whatsapp_notificaciones_activas ?? false } })
   },
   setProfileField: (field, value) => set((state) => ({ profileForm: { ...state.profileForm, [field]: value } })),
   selectCountry: (countryId) => { const state = get(); const country = state.countries.find((item) => item.id === countryId); set({ profileForm: { ...state.profileForm, countryId, departmentId: '', cityId: '', currency: country?.moneda_codigo ?? state.profileForm.currency, timezone: country?.zona_horaria_default ?? state.profileForm.timezone } }) },
   selectDepartment: (departmentId) => set((state) => ({ profileForm: { ...state.profileForm, departmentId, cityId: '' } })),
   saveProfile: async (user, refreshProfile) => {
     const state = get(); const form = state.profileForm; const country = state.countries.find((item) => item.id === form.countryId); const department = state.departments.find((item) => item.id === form.departmentId); const city = state.cities.find((item) => item.id === form.cityId); const planId = state.business?.plan_id
+    const ownerPhoneE164 = form.ownerPhone.trim() ? toE164(form.ownerPhoneCountryCode, form.ownerPhone, state.countries) : ''
+    const businessPhoneE164 = form.phone.trim() ? toE164(form.phoneCountryCode, form.phone, state.countries) : ''
+    const whatsappPhoneE164 = form.whatsappPhone.trim() ? toE164(form.whatsappCountryCode, form.whatsappPhone, state.countries) : ''
     if (!state.business) return set({ error: 'Primero debes elegir un plan y completar la suscripcion o recibir una prueba gratis desde administracion.' })
     if (!country || !planId) return set({ error: 'Selecciona un pais y verifica que el negocio tenga un plan asignado.' })
     if (!city && (!form.cityText.trim() || !form.departmentText.trim())) return set({ error: 'Selecciona una ciudad o escribe la ciudad y departamento.' })
+    if (form.ownerPhone.trim() && !ownerPhoneE164) return set({ error: 'Ingresa un telefono valido para el responsable.' })
+    if (form.phone.trim() && !businessPhoneE164) return set({ error: 'Ingresa un telefono valido para el club.' })
+    if (form.whatsappNotificationsActive && !whatsappPhoneE164) return set({ error: 'Ingresa un WhatsApp valido con su indicativo de pais.' })
     set({ saving: true, error: null, message: '' })
     try {
-      await businessRepository.updateUser(user.id, { nombre: form.ownerName, telefono: form.ownerPhone || null })
-      const values = { nombre: form.name.trim(), descripcion: form.description.trim() || null, telefono: form.phone.trim() || null, email: form.email.trim() || null, direccion: form.address.trim(), pais_codigo: country.codigo_iso2, ciudad_id: city?.id ?? null, departamento: department?.nombre ?? form.departmentText.trim(), ciudad: city?.nombre ?? form.cityText.trim(), moneda: form.currency, moneda_codigo: form.currency, timezone: form.timezone, zona_horaria: form.timezone, horario_apertura: form.openingTime, horario_cierre: form.closingTime, logo_url: form.logoUrl.trim() || null }
+      await businessRepository.updateUser(user.id, { nombre: form.ownerName, telefono: ownerPhoneE164 || null })
+      const values = { nombre: form.name.trim(), descripcion: form.description.trim() || null, telefono: businessPhoneE164 || null, whatsapp_telefono_e164: whatsappPhoneE164 || null, whatsapp_notificaciones_activas: form.whatsappNotificationsActive, email: form.email.trim() || null, direccion: form.address.trim(), pais_codigo: country.codigo_iso2, ciudad_id: city?.id ?? null, departamento: department?.nombre ?? form.departmentText.trim(), ciudad: city?.nombre ?? form.cityText.trim(), moneda: form.currency, moneda_codigo: form.currency, timezone: form.timezone, zona_horaria: form.timezone, horario_apertura: form.openingTime, horario_cierre: form.closingTime, logo_url: form.logoUrl.trim() || null }
       await businessRepository.updateBusiness(state.business.id, values)
       await Promise.all([refreshProfile(), get().refresh(user.id)])
       set({ saving: false, message: 'Cambios guardados.' })

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { adminRepository } from '../../services/repositories/adminRepository'
 import { isPaymentProvider, type PaymentProvider } from '../../services/payments/paymentProvider'
 import type { Ciudad, Departamento, Negocio, Pais, Plan, Usuario } from '../../services/supabase/tables'
+import { splitPhone, toE164 } from '../../shared/lib/phone'
 
 export type BusinessRow = Negocio & {
   payment_provider?: string | null
@@ -18,6 +19,10 @@ export type BusinessForm = {
   description: string
   email: string
   phone: string
+  phoneCountryCode: string
+  whatsappPhone: string
+  whatsappCountryCode: string
+  whatsappNotificationsActive: boolean
   logoUrl: string
   countryId: string
   departmentId: string
@@ -46,6 +51,10 @@ const emptyForm: BusinessForm = {
   description: '',
   email: '',
   phone: '',
+  phoneCountryCode: 'CO',
+  whatsappPhone: '',
+  whatsappCountryCode: 'CO',
+  whatsappNotificationsActive: false,
   logoUrl: '',
   countryId: '',
   departmentId: '',
@@ -138,6 +147,8 @@ export const useAdminBusinessesStore = create<State>((set, get) => ({
         ownerId: state.users.find((item) => item.rol !== 'admin')?.id ?? state.users[0]?.id ?? '',
         planId: state.plans.find((item) => item.activo)?.id ?? '',
         countryId: country?.id ?? '',
+        phoneCountryCode: country?.codigo_iso2 ?? 'CO',
+        whatsappCountryCode: country?.codigo_iso2 ?? 'CO',
         departmentId: department?.id ?? '',
         cityId: city?.id ?? '',
         currency: country?.moneda_codigo ?? 'COP',
@@ -164,7 +175,11 @@ export const useAdminBusinessesStore = create<State>((set, get) => ({
         slug: item.slug,
         description: item.descripcion ?? '',
         email: item.email ?? '',
-        phone: item.telefono ?? '',
+        phone: splitPhone(item.telefono, state.countries, item.pais_codigo).nationalPhone,
+        phoneCountryCode: splitPhone(item.telefono, state.countries, item.pais_codigo).countryCode,
+        whatsappPhone: splitPhone(item.whatsapp_telefono_e164, state.countries, item.pais_codigo).nationalPhone,
+        whatsappCountryCode: splitPhone(item.whatsapp_telefono_e164, state.countries, item.pais_codigo).countryCode,
+        whatsappNotificationsActive: item.whatsapp_notificaciones_activas,
         logoUrl: item.logo_url ?? '',
         countryId: country?.id ?? '',
         departmentId: department?.id ?? '',
@@ -228,10 +243,14 @@ export const useAdminBusinessesStore = create<State>((set, get) => ({
     const city = state.cities.find((item) => item.id === form.cityId)
     const latitude = toNullableNumber(form.latitude)
     const longitude = toNullableNumber(form.longitude)
+    const phoneE164 = form.phone.trim() ? toE164(form.phoneCountryCode, form.phone, state.countries) : ''
+    const whatsappE164 = form.whatsappPhone.trim() ? toE164(form.whatsappCountryCode, form.whatsappPhone, state.countries) : ''
 
     if (!country || !department || !city) return set({ error: 'Selecciona una ubicacion valida.' })
     if (form.openingTime >= form.closingTime) return set({ error: 'La hora de cierre debe ser posterior.' })
     if ((latitude !== null && !Number.isFinite(latitude)) || (longitude !== null && !Number.isFinite(longitude))) return set({ error: 'Las coordenadas deben ser numeros validos.' })
+    if (form.phone.trim() && !phoneE164) return set({ error: 'Ingresa un telefono valido con su indicativo de pais.' })
+    if (form.whatsappNotificationsActive && !whatsappE164) return set({ error: 'Ingresa un WhatsApp valido con su indicativo de pais.' })
 
     const plan = state.plans.find((item) => item.id === form.planId)
     const isFreePlan = (plan?.precio_mensual_minor ?? 1) === 0
@@ -245,7 +264,9 @@ export const useAdminBusinessesStore = create<State>((set, get) => ({
       slug: form.slug.trim() || `${slugify(form.name)}-${state.editing?.id.slice(0, 6) ?? crypto.randomUUID().slice(0, 6)}`,
       descripcion: form.description.trim() || null,
       email: form.email.trim() || null,
-      telefono: form.phone.trim() || null,
+      telefono: phoneE164 || null,
+      whatsapp_telefono_e164: whatsappE164 || null,
+      whatsapp_notificaciones_activas: form.whatsappNotificationsActive,
       logo_url: form.logoUrl.trim() || null,
       pais_codigo: country.codigo_iso2,
       departamento: department.nombre,

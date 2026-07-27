@@ -22,6 +22,7 @@ import { RoleHomePage } from './RoleHomePage'
 import { SuspendedAccountPage } from '../features/auth/pages/SuspendedAccountPage'
 import { LoadingScreen } from '../shared/components/LoadingScreen'
 import { AuthLayout } from '../shared/layouts/AuthLayout'
+import { TermsAndConditionsPage } from '../shared/pages/TermsAndConditionsPage'
 
 const AdminLayout = lazy(() => import('../shared/layouts/AdminLayout').then((module) => ({ default: module.AdminLayout })))
 const AdminDashboardPage = lazy(() => import('../features/admin/pages/AdminDashboardPage').then((module) => ({ default: module.AdminDashboardPage })))
@@ -44,6 +45,7 @@ export function AppRouter() {
         <Route path="checkout/:bookingReference" element={<GuestCheckoutPage />} />
         <Route path="checkout/:bookingReference/respuesta" element={<BookingPaymentResultPage />} />
         <Route path="pago/respuesta" element={<EpaycoResponsePage />} />
+        <Route path="terminos-y-condiciones" element={<TermsAndConditionsPage />} />
         <Route path="404" element={<NotFoundPage />} />
       </Route>
 

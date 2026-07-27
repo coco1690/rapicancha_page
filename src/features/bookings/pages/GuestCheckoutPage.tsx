@@ -1,15 +1,18 @@
 import { useEffect, type FormEvent } from 'react'
 import { CalendarMonthOutlined, LockOutlined, PaymentsOutlined } from '@mui/icons-material'
 import { Alert, Box, Button, Card, CardContent, Checkbox, Container, FormControlLabel, MenuItem, Stack, TextField, Typography } from '@mui/material'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useGuestCheckoutStore } from '../../../stores/useGuestCheckoutStore'
 import { formatMinorMoney } from '../../../shared/lib/money'
+import { InternationalPhoneField } from '../../../shared/components/InternationalPhoneField'
+import { TERMS_PATH } from '../../../shared/legal/terms'
 
 export function GuestCheckoutPage() {
   const params = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const form = useGuestCheckoutStore((state) => state.form)
+  const countries = useGuestCheckoutStore((state) => state.countries)
   const context = useGuestCheckoutStore((state) => state.context)
   const submitting = useGuestCheckoutStore((state) => state.submitting)
   const error = useGuestCheckoutStore((state) => state.error)
@@ -17,11 +20,16 @@ export function GuestCheckoutPage() {
   const reference = useGuestCheckoutStore((state) => state.reference)
   const holdSecondsLeft = useGuestCheckoutStore((state) => state.holdSecondsLeft)
   const hydrate = useGuestCheckoutStore((state) => state.hydrate)
+  const loadPhoneCountries = useGuestCheckoutStore((state) => state.loadPhoneCountries)
   const hydrateReference = useGuestCheckoutStore((state) => state.hydrateReference)
   const setField = useGuestCheckoutStore((state) => state.setField)
   const tickHold = useGuestCheckoutStore((state) => state.tickHold)
   const submitCheckout = useGuestCheckoutStore((state) => state.submit)
   const cancelCheckout = useGuestCheckoutStore((state) => state.cancel)
+
+  useEffect(() => {
+    if (countries.length === 0) void loadPhoneCountries()
+  }, [countries.length, loadPhoneCountries])
 
   useEffect(() => {
     const bookingReference = params.bookingReference ?? ''
@@ -65,6 +73,7 @@ export function GuestCheckoutPage() {
   }
 
   const priceLabel = context.priceMinor > 0 ? formatMinorMoney(context.priceMinor, context.currency) : 'Por confirmar'
+  const serviceFeeLabel = context.priceMinor > 0 ? formatMinorMoney(Math.round(context.priceMinor * 0.1), context.currency) : 'Por confirmar'
   const holdLabel = reference ? formatCountdown(holdSecondsLeft) : '7 min'
 
   return <Box component="main" sx={{ bgcolor: 'background.default', minHeight: 'calc(100vh - 68px)', py: { xs: 1.5, sm: 3, md: 7 } }}>
@@ -81,14 +90,18 @@ export function GuestCheckoutPage() {
             <Box sx={{ display: 'grid', gap: { xs: 0.75, sm: 1.25 }, gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(4, minmax(0, 1fr))' }, mb: { xs: 1.25, sm: 2.5 } }}>
               <SummaryItem icon={<CalendarMonthOutlined />} label="Fecha" value={context.date || 'Sin fecha'} />
               <SummaryItem icon={<PaymentsOutlined />} label="Horario" value={context.time ? `${context.time} - ${nextHour(context.time)}` : 'Sin hora'} />
-              <SummaryItem icon={<PaymentsOutlined />} label="Precio" value={priceLabel} />
+              <SummaryItem icon={<PaymentsOutlined />} label="Total" value={priceLabel} />
               <SummaryItem icon={<LockOutlined />} label="Tiempo" value={holdLabel} />
             </Box>
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', bgcolor: 'action.hover', justifyContent: 'space-between', mb: { xs: 1.5, sm: 2.5 }, px: { xs: 1.25, sm: 1.5 }, py: 1 }}>
+              <Typography color="text.secondary" sx={{ fontSize: { xs: 11.5, sm: 13 }, lineHeight: 1.4 }}>Cargo de servicio y procesamiento incluido (10 %)</Typography>
+              <Typography sx={{ flexShrink: 0, fontSize: { xs: 12, sm: 13.5 }, fontWeight: 900 }}>{serviceFeeLabel}</Typography>
+            </Stack>
 
             <Box component="form" onSubmit={submit}>
               <Stack spacing={{ xs: 1.25, sm: 2 }}>
                 <TextField fullWidth label="Nombre completo" required size="small" value={form.customerName} onChange={(event) => setField('customerName', event.target.value)} />
-                <TextField fullWidth label="Telefono" required size="small" type="tel" value={form.customerPhone} onChange={(event) => setField('customerPhone', event.target.value)} />
+                <InternationalPhoneField countries={countries} countryCode={form.customerPhoneCountryCode} phone={form.customerPhone} onCountryChange={(value) => setField('customerPhoneCountryCode', value)} onPhoneChange={(value) => setField('customerPhone', value)} required />
                 <TextField fullWidth label="Correo" size="small" type="email" value={form.customerEmail} onChange={(event) => setField('customerEmail', event.target.value)} />
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
                   <TextField fullWidth label="Tipo de documento" required select size="small" value={form.customerDocumentType} onChange={(event) => setField('customerDocumentType', event.target.value)}>
@@ -99,13 +112,18 @@ export function GuestCheckoutPage() {
                   </TextField>
                   <TextField fullWidth label="Documento" required size="small" value={form.customerDocument} onChange={(event) => setField('customerDocument', event.target.value)} />
                 </Stack>
+                <FormControlLabel control={<Checkbox checked={form.acceptsWhatsApp} size="small" onChange={(event) => setField('acceptsWhatsApp', event.target.checked)} />} label={<Typography sx={{ fontSize: { xs: 13.5, sm: 16 } }}>Quiero recibir por WhatsApp la confirmacion y los cambios de esta reserva</Typography>} />
                 <FormControlLabel control={<Checkbox checked={form.acceptsMarketing} size="small" onChange={(event) => setField('acceptsMarketing', event.target.checked)} />} label={<Typography sx={{ fontSize: { xs: 13.5, sm: 16 } }}>Acepto recibir promociones del club</Typography>} />
+                <FormControlLabel
+                  control={<Checkbox checked={form.acceptsTerms} size="small" onChange={(event) => setField('acceptsTerms', event.target.checked)} />}
+                  label={<Typography sx={{ fontSize: { xs: 13.5, sm: 16 } }}>He leido y acepto los <Typography component={Link} rel="noreferrer" sx={{ color: 'primary.main', font: 'inherit', fontWeight: 800 }} target="_blank" to={TERMS_PATH}>terminos y condiciones</Typography> (obligatorio).</Typography>}
+                />
 
                 {error && <Alert severity="error">{error}</Alert>}
                 {message && <Alert severity="info">{message}{reference ? ` Referencia: ${reference}` : ''}</Alert>}
 
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
-                  <Button disabled={submitting} fullWidth size="large" type="submit" variant="contained">{submitting ? 'Abriendo ePayco...' : reference ? 'Continuar pago' : 'Pagar con ePayco'}</Button>
+                  <Button disabled={submitting || !form.acceptsTerms} fullWidth size="large" type="submit" variant="contained">{submitting ? 'Abriendo ePayco...' : reference ? 'Continuar pago' : 'Pagar con ePayco'}</Button>
                   <Button disabled={submitting} fullWidth onClick={() => void cancel()} size="large" type="button" variant="outlined">Cancelar reserva</Button>
                 </Stack>
               </Stack>

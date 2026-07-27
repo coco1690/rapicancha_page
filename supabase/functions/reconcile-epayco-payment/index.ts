@@ -1,5 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
+declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void }
+
 type ReconcileBody = { reference?: string; providerResponse?: unknown }
 
 const corsHeaders = {
@@ -47,11 +49,21 @@ Deno.serve(async (request) => {
     const paymentStatus = approved ? 'paid' : refunded ? 'refunded' : 'failed'
     const reservationStatus = approved ? 'confirmada' : refunded ? 'reembolsada' : 'expirada'
     const transactionId = readTransactionId(transaction) || providerReference
-    const { error: updatePaymentError } = await adminClient.from('pagos').update({ estado: paymentStatus, provider_payment_id: transactionId, provider_payload: transaction }).eq('id', payment.id)
+    const { error: updatePaymentError } = await adminClient.from('pagos').update({
+      estado: paymentStatus,
+      provider_payment_id: transactionId,
+      provider_payload: {
+        ...objectValue(payment.provider_payload),
+        ...paymentAuditPayload(transaction, providerReference),
+      },
+    }).eq('id', payment.id)
     if (updatePaymentError) return json({ error: updatePaymentError.message }, 400)
     const { error: updateReservationError } = await adminClient.from('reservas').update({ estado_reserva: reservationStatus }).eq('id', payment.reserva_id)
     if (updateReservationError) return json({ error: updateReservationError.message }, 400)
-    if (approved) await createBusinessBookingNotification(adminClient, payment.reserva_id)
+    if (approved) {
+      await createBusinessBookingNotification(adminClient, payment.reserva_id)
+      EdgeRuntime.waitUntil(requestWhatsAppDispatch(supabaseUrl))
+    }
 
     return json({ ok: true, confirmed: approved, status: paymentStatus }, 200)
   } catch (error) {
@@ -112,6 +124,24 @@ function readTransactionId(payload: Record<string, unknown>) {
   return stringValue(payload.x_transaction_id) || stringValue(payload.transaction_id) || stringValue(payload.x_ref_payco) || stringValue(payload.ref_payco)
 }
 
+function paymentAuditPayload(payload: Record<string, unknown>, providerReference: string) {
+  return {
+    source: 'validation',
+    providerReference,
+    transactionId: readTransactionId(payload),
+    responseCode: stringValue(payload.x_cod_response),
+    response: stringValue(payload.x_response),
+    transactionState: stringValue(payload.x_transaction_state),
+    amount: stringValue(payload.x_amount) || stringValue(payload.amount),
+    currency: stringValue(payload.x_currency_code) || stringValue(payload.currency),
+    transactionDate: stringValue(payload.x_transaction_date) || stringValue(payload.x_fecha_transaccion),
+  }
+}
+
+function objectValue(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
 async function createBusinessBookingNotification(adminClient: ReturnType<typeof createClient>, reservationId: string) {
   const { data: reservation } = await adminClient.from('reservas').select('id, negocio_id, cancha_id, referencia_publica, nombre_cliente, telefono_cliente, fecha_local, hora_inicio_local, hora_fin_local, precio_total_minor, moneda').eq('id', reservationId).maybeSingle()
   if (!reservation) return
@@ -134,6 +164,24 @@ function requiredEnv(name: string) {
   const value = Deno.env.get(name)
   if (!value) throw new Error(`${name} no esta configurado.`)
   return value
+}
+
+async function requestWhatsAppDispatch(supabaseUrl: string) {
+  const workerSecret = Deno.env.get('WHATSAPP_WORKER_SECRET')?.trim()
+  if (!workerSecret) return
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notifications`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-rapicancha-worker-secret': workerSecret,
+      },
+      body: JSON.stringify({ limit: 20 }),
+    })
+    if (!response.ok) console.error('[reconcile-epayco-payment] No se pudo iniciar el despacho WhatsApp.')
+  } catch {
+    console.error('[reconcile-epayco-payment] No se pudo contactar el despacho WhatsApp.')
+  }
 }
 
 function json(body: unknown, status: number) {

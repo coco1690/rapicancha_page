@@ -30,6 +30,9 @@
     "db:push:booking-hold-7-minutes": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260721120500_booking_hold_7_minutes.sql",
     "db:push:business-notifications": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260723100000_business_booking_notifications.sql",
     "db:push:booking-notification-trigger": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260723103000_booking_confirmation_notification_trigger.sql",
+    "db:push:twilio-whatsapp": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260726120000_twilio_whatsapp_booking_notifications.sql",
+    "db:push:country-calling-codes": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260726130000_country_calling_codes.sql",
+    "db:push:booking-terms": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260727100000_booking_terms_acceptance.sql",
     "db:check:phase1": "node scripts/check-supabase-phase1.mjs",
     "supabase:login": "supabase login",
     "functions:deploy:admin-users": "supabase functions deploy admin-users --project-ref nuktopommfdkqmpxtujb --use-api",
@@ -38,7 +41,9 @@
     "functions:deploy:cancel-booking-checkout": "supabase functions deploy cancel-booking-checkout --project-ref nuktopommfdkqmpxtujb --use-api --no-verify-jwt",
     "functions:deploy:booking-payment-status": "supabase functions deploy booking-payment-status --project-ref nuktopommfdkqmpxtujb --use-api --no-verify-jwt",
     "functions:deploy:epayco-webhook": "supabase functions deploy epayco-webhook --project-ref nuktopommfdkqmpxtujb --use-api --no-verify-jwt",
-    "functions:deploy:reconcile-epayco-payment": "supabase functions deploy reconcile-epayco-payment --project-ref nuktopommfdkqmpxtujb --use-api --no-verify-jwt"
+    "functions:deploy:reconcile-epayco-payment": "supabase functions deploy reconcile-epayco-payment --project-ref nuktopommfdkqmpxtujb --use-api --no-verify-jwt",
+    "functions:deploy:send-whatsapp-notifications": "supabase functions deploy send-whatsapp-notifications --project-ref nuktopommfdkqmpxtujb --use-api --no-verify-jwt",
+    "functions:deploy:twilio-message-status": "supabase functions deploy twilio-message-status --project-ref nuktopommfdkqmpxtujb --use-api --no-verify-jwt"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/client'
+import type { Pais } from '../supabase/tables'
 
 export type CreateBookingCheckoutInput = {
   courtId: string
@@ -6,10 +7,14 @@ export type CreateBookingCheckoutInput = {
   time: string
   customerName: string
   customerPhone: string
+  customerPhoneCountryCode: string
   customerEmail: string
   customerDocumentType: string
   customerDocument: string
   acceptsMarketing: boolean
+  acceptsWhatsApp: boolean
+  acceptsTerms: boolean
+  termsVersion: string
   returnTo: string
 }
 
@@ -49,6 +54,11 @@ function client() {
 }
 
 export const checkoutRepository = {
+  fetchPhoneCountries: async (): Promise<Pais[]> => {
+    const { data, error } = await client().from('paises').select('*').eq('activo', true).not('indicativo_pais', 'is', null).order('nombre')
+    if (error) throw error
+    return data ?? []
+  },
   createBookingCheckout: async (input: CreateBookingCheckoutInput) => {
     const { data, error } = await client().functions.invoke<CreateBookingCheckoutResponse | { error?: string }>('create-booking-checkout', { body: input })
     if (error) throw new Error(await functionErrorMessage(error))

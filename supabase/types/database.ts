@@ -617,6 +617,8 @@ export type Database = {
           telefono: string | null
           timezone: string
           updated_at: string | null
+          whatsapp_notificaciones_activas: boolean
+          whatsapp_telefono_e164: string | null
           zona_horaria: string | null
         }
         Insert: {
@@ -657,6 +659,8 @@ export type Database = {
           telefono?: string | null
           timezone?: string
           updated_at?: string | null
+          whatsapp_notificaciones_activas?: boolean
+          whatsapp_telefono_e164?: string | null
           zona_horaria?: string | null
         }
         Update: {
@@ -697,6 +701,8 @@ export type Database = {
           telefono?: string | null
           timezone?: string
           updated_at?: string | null
+          whatsapp_notificaciones_activas?: boolean
+          whatsapp_telefono_e164?: string | null
           zona_horaria?: string | null
         }
         Relationships: [
@@ -925,6 +931,7 @@ export type Database = {
           moneda_codigo: string
           moneda_simbolo: string
           nombre: string
+          indicativo_pais: string | null
           zona_horaria_default: string
         }
         Insert: {
@@ -935,6 +942,7 @@ export type Database = {
           moneda_codigo: string
           moneda_simbolo: string
           nombre: string
+          indicativo_pais?: string | null
           zona_horaria_default: string
         }
         Update: {
@@ -945,6 +953,7 @@ export type Database = {
           moneda_codigo?: string
           moneda_simbolo?: string
           nombre?: string
+          indicativo_pais?: string | null
           zona_horaria_default?: string
         }
         Relationships: []
@@ -1151,6 +1160,8 @@ export type Database = {
       reservas: {
         Row: {
           acepta_marketing_negocio: boolean
+          acepta_notificaciones_whatsapp: boolean
+          acepta_terminos: boolean
           actualizado_en: string
           cancha_id: string
           creado_en: string
@@ -1172,11 +1183,16 @@ export type Database = {
           referencia_publica: string
           seguro_cancelacion_activo: boolean
           telefono_cliente: string
+          telefono_cliente_e164: string | null
+          terminos_aceptados_en: string | null
+          terminos_version: string | null
           timezone: string
           usuario_id: string | null
         }
         Insert: {
           acepta_marketing_negocio?: boolean
+          acepta_notificaciones_whatsapp?: boolean
+          acepta_terminos?: boolean
           actualizado_en?: string
           cancha_id: string
           creado_en?: string
@@ -1198,11 +1214,16 @@ export type Database = {
           referencia_publica?: string
           seguro_cancelacion_activo?: boolean
           telefono_cliente: string
+          telefono_cliente_e164?: string | null
+          terminos_aceptados_en?: string | null
+          terminos_version?: string | null
           timezone: string
           usuario_id?: string | null
         }
         Update: {
           acepta_marketing_negocio?: boolean
+          acepta_notificaciones_whatsapp?: boolean
+          acepta_terminos?: boolean
           actualizado_en?: string
           cancha_id?: string
           creado_en?: string
@@ -1224,6 +1245,9 @@ export type Database = {
           referencia_publica?: string
           seguro_cancelacion_activo?: boolean
           telefono_cliente?: string
+          telefono_cliente_e164?: string | null
+          terminos_aceptados_en?: string | null
+          terminos_version?: string | null
           timezone?: string
           usuario_id?: string | null
         }
@@ -1757,6 +1781,78 @@ export type Database = {
           },
         ]
       }
+      whatsapp_notificaciones: {
+        Row: {
+          actualizado_en: string
+          creado_en: string
+          destinatario: string
+          entregado_en: string | null
+          enviado_en: string | null
+          error_codigo: string | null
+          error_detalle: string | null
+          estado: string
+          evento: string
+          id: string
+          intentos: number
+          leido_en: string | null
+          negocio_id: string
+          proximo_intento_en: string
+          reserva_id: string
+          twilio_message_sid: string | null
+        }
+        Insert: {
+          actualizado_en?: string
+          creado_en?: string
+          destinatario: string
+          entregado_en?: string | null
+          enviado_en?: string | null
+          error_codigo?: string | null
+          error_detalle?: string | null
+          estado?: string
+          evento?: string
+          id?: string
+          intentos?: number
+          leido_en?: string | null
+          negocio_id: string
+          proximo_intento_en?: string
+          reserva_id: string
+          twilio_message_sid?: string | null
+        }
+        Update: {
+          actualizado_en?: string
+          creado_en?: string
+          destinatario?: string
+          entregado_en?: string | null
+          enviado_en?: string | null
+          error_codigo?: string | null
+          error_detalle?: string | null
+          estado?: string
+          evento?: string
+          id?: string
+          intentos?: number
+          leido_en?: string | null
+          negocio_id?: string
+          proximo_intento_en?: string
+          reserva_id?: string
+          twilio_message_sid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_notificaciones_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notificaciones_reserva_id_fkey"
+            columns: ["reserva_id"]
+            isOneToOne: false
+            referencedRelation: "reservas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       canchas_publicas: {
@@ -1953,6 +2049,10 @@ export type Database = {
       }
     }
     Functions: {
+      claim_whatsapp_notificaciones: {
+        Args: { p_limit?: number }
+        Returns: Database["public"]["Tables"]["whatsapp_notificaciones"]["Row"][]
+      }
       is_admin: { Args: never; Returns: boolean }
       owns_negocio: { Args: { target_negocio_id: string }; Returns: boolean }
     }

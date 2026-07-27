@@ -1,28 +1,12 @@
 import process from 'node:process'
 import pg from 'pg'
+import { databaseConnectionError, supabaseDbConfig } from './supabase-db-config.mjs'
 
 const { Client } = pg
 
-const projectRef = process.env.SUPABASE_PROJECT_REF
-const password = process.env.SUPABASE_DB_PASSWORD
-
-if (!projectRef) {
-  throw new Error('Missing SUPABASE_PROJECT_REF')
-}
-
-if (!password) {
-  throw new Error('Missing SUPABASE_DB_PASSWORD')
-}
-
-const client = new Client({
-  host: `db.${projectRef}.supabase.co`,
-  port: 5432,
-  database: 'postgres',
-  user: 'postgres',
-  password,
-  ssl: { rejectUnauthorized: false },
+const client = new Client(supabaseDbConfig({
   connectionTimeoutMillis: 15000,
-})
+}))
 
 const tables = [
   'usuarios',
@@ -49,7 +33,8 @@ try {
     "select count(*)::int as total from information_schema.views where table_schema = 'public' and table_name = 'v_marketplace_canchas'",
   )
   console.log(`v_marketplace_canchas: ${viewResult.rows[0].total === 1 ? 'ok' : 'missing'}`)
+} catch (error) {
+  throw databaseConnectionError(error)
 } finally {
   await client.end().catch(() => {})
 }
-

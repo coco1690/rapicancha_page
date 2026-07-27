@@ -3,14 +3,20 @@ import { checkoutRepository } from '../services/repositories/checkoutRepository'
 import { openEpaycoCheckout } from '../services/payments/epaycoCheckout'
 import { bookingHoldMs, clearPendingCheckout, findPendingCheckoutByReference, findPendingCheckoutForSlot, pendingCheckoutTimeLeftMs, savePendingCheckout } from '../services/payments/pendingCheckout'
 import type { BookingPaymentStatus } from '../services/repositories/checkoutRepository'
+import type { Pais } from '../services/supabase/tables'
+import { toE164 } from '../shared/lib/phone'
+import { CURRENT_TERMS_VERSION } from '../shared/legal/terms'
 
 type CheckoutForm = {
   customerName: string
   customerPhone: string
+  customerPhoneCountryCode: string
   customerEmail: string
   customerDocumentType: string
   customerDocument: string
   acceptsMarketing: boolean
+  acceptsWhatsApp: boolean
+  acceptsTerms: boolean
 }
 
 type CheckoutContext = {
@@ -25,6 +31,7 @@ type CheckoutContext = {
 
 type GuestCheckoutStore = {
   form: CheckoutForm
+  countries: Pais[]
   context: CheckoutContext
   submitting: boolean
   error: string
@@ -32,6 +39,7 @@ type GuestCheckoutStore = {
   reference: string
   holdSecondsLeft: number
   hydrate: (context: Partial<CheckoutContext>) => void
+  loadPhoneCountries: () => Promise<void>
   hydrateReference: (reference: string) => Promise<BookingPaymentStatus | 'missing'>
   setField: <K extends keyof CheckoutForm>(field: K, value: CheckoutForm[K]) => void
   tickHold: () => void
@@ -44,10 +52,13 @@ type GuestCheckoutStore = {
 const emptyForm: CheckoutForm = {
   customerName: '',
   customerPhone: '',
+  customerPhoneCountryCode: 'CO',
   customerEmail: '',
   customerDocumentType: 'CC',
   customerDocument: '',
   acceptsMarketing: false,
+  acceptsWhatsApp: false,
+  acceptsTerms: false,
 }
 
 const emptyContext: CheckoutContext = {
@@ -64,12 +75,29 @@ const errorMessage = (error: unknown) => error instanceof Error ? error.message 
 
 export const useGuestCheckoutStore = create<GuestCheckoutStore>((set, get) => ({
   form: emptyForm,
+  countries: [],
   context: emptyContext,
   submitting: false,
   error: '',
   message: '',
   reference: '',
   holdSecondsLeft: Math.round(bookingHoldMs / 1000),
+  loadPhoneCountries: async () => {
+    try {
+      const countries = await checkoutRepository.fetchPhoneCountries()
+      set((state) => ({
+        countries,
+        form: {
+          ...state.form,
+          customerPhoneCountryCode: countries.some((country) => country.codigo_iso2 === state.form.customerPhoneCountryCode)
+            ? state.form.customerPhoneCountryCode
+            : countries[0]?.codigo_iso2 ?? 'CO',
+        },
+      }))
+    } catch (error) {
+      set({ error: errorMessage(error) })
+    }
+  },
   hydrate: (context) => set((state) => {
     const nextContext = { ...state.context, ...context }
     const pending = nextContext.courtId && nextContext.date && nextContext.time ? findPendingCheckoutForSlot(nextContext.courtId, nextContext.date, nextContext.time) : null
@@ -161,6 +189,7 @@ export const useGuestCheckoutStore = create<GuestCheckoutStore>((set, get) => ({
     const state = get()
     set({ submitting: true, error: '', message: '' })
     try {
+      if (!state.form.acceptsTerms) return set({ submitting: false, error: 'Debes aceptar los terminos y condiciones para continuar.' })
       const pending = state.reference ? findPendingCheckoutByReference(state.reference) : findPendingCheckoutForSlot(state.context.courtId, state.context.date, state.context.time)
       if (pending) {
         set({ context: contextFromPending(pending, state.context), form: formFromPending(pending, state.form), reference: pending.reference, holdSecondsLeft: holdSecondsFromPending(pending), message: 'Reabriendo ePayco...' })
@@ -175,7 +204,8 @@ export const useGuestCheckoutStore = create<GuestCheckoutStore>((set, get) => ({
       }
       if (!state.context.courtId || !state.context.date || !state.context.time) return set({ submitting: false, error: 'La reserva no tiene cancha, fecha u hora valida.' })
       if (state.form.customerName.trim().length < 3) return set({ submitting: false, error: 'Ingresa tu nombre completo.' })
-      if (state.form.customerPhone.trim().length < 7) return set({ submitting: false, error: 'Ingresa un telefono valido.' })
+      const customerPhoneE164 = toE164(state.form.customerPhoneCountryCode, state.form.customerPhone, state.countries)
+      if (!customerPhoneE164) return set({ submitting: false, error: 'Ingresa un telefono valido con su indicativo de pais.' })
       if (state.form.customerDocument.trim().length < 5) return set({ submitting: false, error: 'Ingresa tu documento de identidad.' })
 
       const checkout = await checkoutRepository.createBookingCheckout({
@@ -184,10 +214,14 @@ export const useGuestCheckoutStore = create<GuestCheckoutStore>((set, get) => ({
         time: state.context.time,
         customerName: state.form.customerName.trim(),
         customerPhone: state.form.customerPhone.trim(),
+        customerPhoneCountryCode: state.form.customerPhoneCountryCode,
         customerEmail: state.form.customerEmail.trim(),
         customerDocumentType: state.form.customerDocumentType,
         customerDocument: state.form.customerDocument.trim(),
         acceptsMarketing: state.form.acceptsMarketing,
+        acceptsWhatsApp: state.form.acceptsWhatsApp,
+        acceptsTerms: state.form.acceptsTerms,
+        termsVersion: CURRENT_TERMS_VERSION,
         returnTo: state.context.returnTo,
       })
       const pendingCreatedAt = Date.now()
@@ -197,7 +231,7 @@ export const useGuestCheckoutStore = create<GuestCheckoutStore>((set, get) => ({
         priceMinor: checkout.priceMinor ?? state.context.priceMinor,
         currency: checkout.currency ?? state.context.currency,
       }
-      savePendingCheckout({ reference: checkout.reservationReference, courtId: state.context.courtId, date: state.context.date, time: state.context.time, returnTo: state.context.returnTo, courtName: nextContext.courtName, priceMinor: nextContext.priceMinor, currency: nextContext.currency, sessionId: checkout.sessionId, test: checkout.test, createdAt: pendingCreatedAt, customerName: state.form.customerName.trim(), customerPhone: state.form.customerPhone.trim(), customerEmail: state.form.customerEmail.trim(), customerDocumentType: state.form.customerDocumentType, customerDocument: state.form.customerDocument.trim(), acceptsMarketing: state.form.acceptsMarketing })
+      savePendingCheckout({ reference: checkout.reservationReference, courtId: state.context.courtId, date: state.context.date, time: state.context.time, returnTo: state.context.returnTo, courtName: nextContext.courtName, priceMinor: nextContext.priceMinor, currency: nextContext.currency, sessionId: checkout.sessionId, test: checkout.test, createdAt: pendingCreatedAt, customerName: state.form.customerName.trim(), customerPhone: state.form.customerPhone.trim(), customerPhoneCountryCode: state.form.customerPhoneCountryCode, customerEmail: state.form.customerEmail.trim(), acceptsMarketing: state.form.acceptsMarketing, acceptsWhatsApp: state.form.acceptsWhatsApp, acceptsTerms: state.form.acceptsTerms, termsVersion: CURRENT_TERMS_VERSION })
       set({ context: nextContext, reference: checkout.reservationReference, holdSecondsLeft: holdSecondsFromCreatedAt(pendingCreatedAt), message: 'Abriendo ePayco...' })
       await openEpaycoCheckout({
         sessionId: checkout.sessionId,
@@ -253,9 +287,12 @@ function formFromPending(pending: ReturnType<typeof findPendingCheckoutByReferen
   return {
     customerName: pending.customerName ?? fallback.customerName,
     customerPhone: pending.customerPhone ?? fallback.customerPhone,
+    customerPhoneCountryCode: pending.customerPhoneCountryCode ?? fallback.customerPhoneCountryCode,
     customerEmail: pending.customerEmail ?? fallback.customerEmail,
-    customerDocumentType: pending.customerDocumentType ?? fallback.customerDocumentType,
-    customerDocument: pending.customerDocument ?? fallback.customerDocument,
+    customerDocumentType: fallback.customerDocumentType,
+    customerDocument: '',
     acceptsMarketing: pending.acceptsMarketing ?? fallback.acceptsMarketing,
+    acceptsWhatsApp: pending.acceptsWhatsApp ?? fallback.acceptsWhatsApp,
+    acceptsTerms: pending.acceptsTerms === true && pending.termsVersion === CURRENT_TERMS_VERSION,
   }
 }

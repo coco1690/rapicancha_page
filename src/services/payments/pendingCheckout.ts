@@ -12,10 +12,12 @@ export type PendingCheckout = {
   createdAt: number
   customerName?: string
   customerPhone?: string
+  customerPhoneCountryCode?: string
   customerEmail?: string
-  customerDocumentType?: string
-  customerDocument?: string
   acceptsMarketing?: boolean
+  acceptsWhatsApp?: boolean
+  acceptsTerms?: boolean
+  termsVersion?: string
 }
 
 const storageKey = 'rapicancha:pending-checkouts'

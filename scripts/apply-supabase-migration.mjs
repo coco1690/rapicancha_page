@@ -1,20 +1,11 @@
 import { readFile } from 'node:fs/promises'
 import process from 'node:process'
 import pg from 'pg'
+import { databaseConnectionError, supabaseDbConfig } from './supabase-db-config.mjs'
 
 const { Client } = pg
 
-const projectRef = process.env.SUPABASE_PROJECT_REF
-const password = process.env.SUPABASE_DB_PASSWORD
 const migrationPath = process.argv[2]
-
-if (!projectRef) {
-  throw new Error('Missing SUPABASE_PROJECT_REF')
-}
-
-if (!password) {
-  throw new Error('Missing SUPABASE_DB_PASSWORD')
-}
 
 if (!migrationPath) {
   throw new Error('Usage: node scripts/apply-supabase-migration.mjs <migration.sql>')
@@ -27,16 +18,10 @@ const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, mill
 
 let lastError
 for (let attempt = 1; attempt <= 3; attempt += 1) {
-  const client = new Client({
-    host: `db.${projectRef}.supabase.co`,
-    port: 5432,
-    database: 'postgres',
-    user: 'postgres',
-    password,
-    ssl: { rejectUnauthorized: false },
+  const client = new Client(supabaseDbConfig({
     connectionTimeoutMillis: 30000,
-    query_timeout: 120000,
-  })
+    queryTimeoutMillis: 120000,
+  }))
 
   try {
     await client.connect()
@@ -57,4 +42,4 @@ for (let attempt = 1; attempt <= 3; attempt += 1) {
   }
 }
 
-if (lastError) throw lastError
+if (lastError) throw databaseConnectionError(lastError)

@@ -1,5 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
+declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void }
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -28,12 +30,15 @@ Deno.serve(async (request) => {
     const adminClient = createClient(supabaseUrl, secretKey, { auth: { autoRefreshToken: false, persistSession: false } })
     const { data: payment, error: paymentError } = await adminClient
       .from('pagos')
-      .select('id, reserva_id')
+      .select('id, reserva_id, monto_total_minor, moneda, provider_payload')
       .or(referenceFilter)
       .maybeSingle()
 
     if (paymentError) return json({ error: paymentError.message }, 400)
     if (!payment?.id) return json({ ok: true, ignored: true, reason: 'Pago no encontrado' }, 200)
+    if (!matchesPayment(payload, payment.monto_total_minor, payment.moneda)) {
+      return json({ error: 'El monto o la moneda no coincide con el pago.' }, 409)
+    }
 
     const paid = isApproved(payload)
     const refunded = isRefunded(payload)
@@ -44,7 +49,10 @@ Deno.serve(async (request) => {
     const { error: paymentUpdateError } = await adminClient.from('pagos').update({
       estado: nextPaymentStatus,
       provider_payment_id: readTransactionId(payload),
-      provider_payload: payload,
+      provider_payload: {
+        ...objectValue(payment.provider_payload),
+        ...paymentAuditPayload(payload, 'webhook'),
+      },
     }).eq('id', payment.id)
     if (paymentUpdateError) throw new Error(`No se pudo actualizar el pago: ${paymentUpdateError.message}`)
 
@@ -56,7 +64,10 @@ Deno.serve(async (request) => {
       if (reservationUpdateError) {
         throw new Error(`No se pudo actualizar la reserva: ${reservationUpdateError.message}`)
       }
-      if (paid) await createBusinessBookingNotification(adminClient, payment.reserva_id)
+      if (paid) {
+        await createBusinessBookingNotification(adminClient, payment.reserva_id)
+        EdgeRuntime.waitUntil(requestWhatsAppDispatch(supabaseUrl))
+      }
     }
 
     return json({ ok: true, status: nextPaymentStatus }, 200)
@@ -117,6 +128,50 @@ function rapicanchaReference(reference: string) {
 
 function readTransactionId(payload: Record<string, unknown>) {
   return stringValue(payload.transaction_id) || stringValue(payload.x_transaction_id) || stringValue(payload.ref_payco) || stringValue(payload.x_ref_payco) || readReference(payload)
+}
+
+function matchesPayment(payload: Record<string, unknown>, expectedAmount: number, expectedCurrency: string) {
+  const amount = Number(stringValue(payload.x_amount) || stringValue(payload.amount))
+  const currency = (stringValue(payload.x_currency_code) || stringValue(payload.currency)).toUpperCase()
+  return Number.isFinite(amount)
+    && Math.abs(amount - expectedAmount) < 0.01
+    && currency === expectedCurrency.toUpperCase()
+}
+
+function paymentAuditPayload(payload: Record<string, unknown>, source: string) {
+  return {
+    source,
+    providerReference: stringValue(payload.x_ref_payco) || stringValue(payload.ref_payco),
+    transactionId: readTransactionId(payload),
+    responseCode: stringValue(payload.x_cod_response) || stringValue(payload.cod_response),
+    response: stringValue(payload.x_response) || stringValue(payload.response),
+    transactionState: stringValue(payload.x_transaction_state) || stringValue(payload.transaction_state),
+    amount: stringValue(payload.x_amount) || stringValue(payload.amount),
+    currency: stringValue(payload.x_currency_code) || stringValue(payload.currency),
+    transactionDate: stringValue(payload.x_transaction_date) || stringValue(payload.x_fecha_transaccion),
+  }
+}
+
+function objectValue(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+async function requestWhatsAppDispatch(supabaseUrl: string) {
+  const workerSecret = Deno.env.get('WHATSAPP_WORKER_SECRET')?.trim()
+  if (!workerSecret) return
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-notifications`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-rapicancha-worker-secret': workerSecret,
+      },
+      body: JSON.stringify({ limit: 20 }),
+    })
+    if (!response.ok) console.error('[epayco-webhook] No se pudo iniciar el despacho WhatsApp.')
+  } catch {
+    console.error('[epayco-webhook] No se pudo contactar el despacho WhatsApp.')
+  }
 }
 
 function isApproved(payload: Record<string, unknown>) {

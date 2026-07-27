@@ -34,9 +34,12 @@ import { useMarketplaceUiStore } from '../../../stores/useMarketplaceUiStore'
 
 const sports = ['Todos', 'Padel', 'Tenis', 'Voley', 'Futbol 5', 'Futbol 8', 'Futbol 11'] as const
 const heroSportSlides = [
-  { image: '/images/hero-sports/soccer.jpg', label: 'Fútbol', sport: 'Futbol' },
-  { image: '/images/hero-sports/padel.jpg', label: 'Pádel', sport: 'Padel' },
-  { image: '/images/hero-sports/running.jpg', label: 'Running', sport: 'Running' },
+  { image: '/images/hero-sports/soccer.jpg', label: 'Fútbol', mobilePosition: 'center 46%', sport: 'Futbol' },
+  { image: '/images/hero-sports/padel.jpg', label: 'Pádel', mobilePosition: 'center 46%', sport: 'Padel' },
+  { image: '/images/hero-sports/running.jpg', label: 'Running', mobilePosition: 'center 46%', sport: 'Running' },
+  { image: '/images/hero-sports/beach-volleyball.jpg', label: 'Vóley playa', mobilePosition: 'center 48%', sport: 'Voley playa' },
+  { image: '/images/hero-sports/tennis.jpg', label: 'Tenis', mobilePosition: 'center 72%', sport: 'Tenis' },
+  { image: '/images/hero-sports/basketball.jpg', label: 'Baloncesto', mobilePosition: 'center 45%', sport: 'Baloncesto' },
 ] as const
 
 export function MarketplacePage() {
@@ -170,11 +173,11 @@ function HeroSportsPanel() {
 function SportImageSlider({ compact = false }: { compact?: boolean }) {
   return <Box aria-label="Deportes destacados" className={`rapi-sport-image-slider${compact ? ' rapi-sport-image-slider-compact' : ''}`}>
     {heroSportSlides.map((slide, index) => <Box className="rapi-sport-image-slide" key={slide.sport} sx={{ animationDelay: `${index * 4}s` }}>
-      <Box alt={`Persona practicando ${slide.label}`} component="img" src={slide.image} />
+      <Box alt={`Persona practicando ${slide.label}`} component="img" src={slide.image} sx={{ objectPosition: compact ? slide.mobilePosition : 'center' }} />
       <Box className="rapi-sport-image-shade" />
       <Stack className="rapi-sport-image-label" direction="row" spacing={0.75}>
         <SportIcon sport={slide.sport} sx={{ fontSize: compact ? 18 : 20 }} />
-        <Typography sx={{ fontSize: compact ? 12 : 13, fontWeight: 950 }}>{slide.label}</Typography>
+        <Typography noWrap sx={{ fontSize: compact ? 12 : slide.label.length > 8 ? 11 : 13, fontWeight: 950 }}>{slide.label}</Typography>
       </Stack>
     </Box>)}
     <Stack className="rapi-sport-image-dots" direction="row" spacing={0.5}>
@@ -250,7 +253,7 @@ function Footer() {
     <Container maxWidth="lg">
       <Grid container spacing={{ xs: 3, md: 4 }} sx={{ alignItems: 'center' }}>
         <Grid size={{ xs: 12, md: 5 }}><Typography sx={{ fontSize: 23, fontWeight: 950 }}>Rapicancha</Typography><Typography sx={{ color: 'rgba(255,255,255,.68)', fontSize: 14, lineHeight: 1.6, mt: 0.75, maxWidth: 460 }}>Reservas deportivas y operación digital para clubes multi-deporte.</Typography></Grid>
-        <Grid size={{ xs: 12, sm: 7, md: 4 }}><Stack direction="row" spacing={2.5} sx={{ flexWrap: 'wrap', rowGap: 1 }}><Typography component="a" href="#buscar" sx={{ color: 'common.white', fontWeight: 800, textDecoration: 'none' }}>Buscar</Typography><Typography component={Link} sx={{ color: 'common.white', fontWeight: 800, textDecoration: 'none' }} to="/acceso">Clubes</Typography><Typography component={Link} sx={{ color: 'common.white', fontWeight: 800, textDecoration: 'none' }} to="/registro">Crear cuenta</Typography></Stack></Grid>
+        <Grid size={{ xs: 12, sm: 7, md: 4 }}><Stack direction="row" spacing={2.5} sx={{ flexWrap: 'wrap', rowGap: 1 }}><Typography component="a" href="#buscar" sx={{ color: 'common.white', fontWeight: 800, textDecoration: 'none' }}>Buscar</Typography><Typography component={Link} sx={{ color: 'common.white', fontWeight: 800, textDecoration: 'none' }} to="/acceso">Clubes</Typography><Typography component={Link} sx={{ color: 'common.white', fontWeight: 800, textDecoration: 'none' }} to="/registro">Crear cuenta</Typography><Typography component={Link} sx={{ color: 'common.white', fontWeight: 800, textDecoration: 'none' }} to="/terminos-y-condiciones">Terminos</Typography></Stack></Grid>
         <Grid size={{ xs: 12, sm: 5, md: 3 }}><Button color="secondary" component="a" fullWidth href="https://wa.me/573148632751?text=Hola%20Rapicancha%2C%20quiero%20informacion" startIcon={<WhatsApp />} target="_blank" variant="contained">Hablar por WhatsApp</Button></Grid>
       </Grid>
       <Typography sx={{ borderTop: 1, borderColor: 'rgba(255,255,255,.12)', color: 'rgba(255,255,255,.5)', fontSize: 12.5, mt: 3.5, pt: 2 }}>2026 Rapicancha. Plataforma SaaS y marketplace deportivo.</Typography>

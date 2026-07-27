@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { normalizeE164 } from '../_shared/phone.ts'
 
 type CheckoutBody = {
   courtId?: string
@@ -6,10 +7,14 @@ type CheckoutBody = {
   time?: string
   customerName?: string
   customerPhone?: string
+  customerPhoneCountryCode?: string
   customerEmail?: string
   customerDocumentType?: string
   customerDocument?: string
   acceptsMarketing?: boolean
+  acceptsWhatsApp?: boolean
+  acceptsTerms?: boolean
+  termsVersion?: string
 }
 
 type CourtRate = { hora_inicio: string; hora_fin: string; precio_minor: number | null; moneda_codigo: string | null; dias_semana: number[] | null }
@@ -22,6 +27,7 @@ const corsHeaders = {
 const blockingStatuses = ['pendiente_pago', 'confirmada']
 const bookingHoldMinutes = Number(Deno.env.get('BOOKING_HOLD_MINUTES') ?? '7')
 const bookingHoldMs = bookingHoldMinutes * 60 * 1000
+const currentTermsVersion = '2026-07-27'
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return json({ ok: true }, 200)
@@ -50,6 +56,16 @@ Deno.serve(async (request) => {
     if (businessError || ratesError || reservationsError) return json({ error: businessError?.message ?? ratesError?.message ?? reservationsError?.message }, 400)
     if (!business?.id) return json({ error: 'Club no disponible.' }, 404)
 
+    const { data: country, error: countryError } = await adminClient
+      .from('paises')
+      .select('codigo_iso2, indicativo_pais')
+      .eq('codigo_iso2', input.customerPhoneCountryCode)
+      .eq('activo', true)
+      .maybeSingle()
+    if (countryError) return json({ error: countryError.message }, 400)
+    const customerPhoneE164 = normalizeE164(input.customerPhone, country?.indicativo_pais)
+    if (!customerPhoneE164) return json({ error: 'Ingresa un telefono valido con su indicativo de pais.' }, 400)
+
     const endTime = addHour(input.time)
     if (overlapsReservation(input.time, endTime, reservations ?? [])) return json({ error: 'Ese horario ya esta reservado.' }, 409)
 
@@ -73,9 +89,14 @@ Deno.serve(async (request) => {
       inicio_at: toUtcIso(input.date, input.time, timezone),
       fin_at: toUtcIso(input.date, endTime, timezone),
       nombre_cliente: input.customerName,
-      telefono_cliente: input.customerPhone,
+      telefono_cliente: customerPhoneE164,
+      telefono_cliente_e164: input.acceptsWhatsApp ? customerPhoneE164 : null,
       email_cliente: input.customerEmail || null,
       acepta_marketing_negocio: input.acceptsMarketing,
+      acepta_notificaciones_whatsapp: input.acceptsWhatsApp,
+      acepta_terminos: true,
+      terminos_version: input.termsVersion,
+      terminos_aceptados_en: new Date().toISOString(),
       moneda: price.currency,
       precio_total_minor: price.amountMinor,
       timezone,
@@ -113,6 +134,7 @@ Deno.serve(async (request) => {
       reference,
       customerName: input.customerName,
       customerPhone: input.customerPhone,
+      customerCallingCode: country?.indicativo_pais ?? '',
       customerEmail: input.customerEmail,
       customerDocumentType: input.customerDocumentType,
       customerDocument: input.customerDocument,
@@ -127,7 +149,12 @@ Deno.serve(async (request) => {
     await adminClient.from('pagos').update({
       provider_checkout_id: session.sessionId,
       provider_payment_id: session.sessionId,
-      provider_payload: { ...session.raw, providerInvoice },
+      provider_payload: {
+        checkout: 'created',
+        providerInvoice,
+        sessionId: session.sessionId,
+        test: Deno.env.get('EPAYCO_ENV') !== 'production',
+      },
     }).eq('id', payment.id)
 
     return json({
@@ -159,6 +186,7 @@ function validateBody(body: CheckoutBody | null) {
   const time = body?.time?.trim()
   const customerName = body?.customerName?.trim()
   const customerPhone = body?.customerPhone?.trim()
+  const customerPhoneCountryCode = body?.customerPhoneCountryCode?.trim().toUpperCase()
   const customerEmail = body?.customerEmail?.trim() ?? ''
   const customerDocumentType = body?.customerDocumentType?.trim() || 'CC'
   const customerDocument = body?.customerDocument?.trim()
@@ -167,12 +195,29 @@ function validateBody(body: CheckoutBody | null) {
   if (!time || !/^\d{2}:\d{2}$/.test(time)) throw new Error('Hora invalida.')
   if (!customerName || customerName.length < 3) throw new Error('Nombre requerido.')
   if (!customerPhone || customerPhone.length < 7) throw new Error('Telefono requerido.')
+  if (!customerPhoneCountryCode || !/^[A-Z]{2}$/.test(customerPhoneCountryCode)) throw new Error('Indicativo de pais requerido.')
   if (!customerDocument || customerDocument.length < 5) throw new Error('Documento requerido.')
   if (customerEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) throw new Error('Correo invalido.')
-  return { courtId, date, time, customerName, customerPhone, customerEmail, customerDocumentType, customerDocument, acceptsMarketing: Boolean(body?.acceptsMarketing) }
+  if (body?.acceptsTerms !== true) throw new Error('Debes aceptar los terminos y condiciones.')
+  if (body?.termsVersion !== currentTermsVersion) throw new Error('Los terminos cambiaron. Recarga la pagina y vuelve a aceptarlos.')
+  return {
+    courtId,
+    date,
+    time,
+    customerName,
+    customerPhone,
+    customerPhoneCountryCode,
+    customerEmail,
+    customerDocumentType,
+    customerDocument,
+    acceptsMarketing: Boolean(body?.acceptsMarketing),
+    acceptsWhatsApp: Boolean(body?.acceptsWhatsApp),
+    acceptsTerms: true,
+    termsVersion: currentTermsVersion,
+  }
 }
 
-async function createEpaycoSession(input: { amountMinor: number; currency: string; reference: string; providerInvoice: string; customerName: string; customerPhone: string; customerEmail: string; customerDocumentType: string; customerDocument: string; businessName: string; courtName: string; ip: string; responseUrl: string; confirmationUrl: string }) {
+async function createEpaycoSession(input: { amountMinor: number; currency: string; reference: string; providerInvoice: string; customerName: string; customerPhone: string; customerCallingCode: string; customerEmail: string; customerDocumentType: string; customerDocument: string; businessName: string; courtName: string; ip: string; responseUrl: string; confirmationUrl: string }) {
   const publicKey = requiredEnv('EPAYCO_PUBLIC_KEY')
   const privateKey = requiredEnv('EPAYCO_PRIVATE_KEY')
   const auth = btoa(`${publicKey}:${privateKey}`)
@@ -208,7 +253,7 @@ async function createEpaycoSession(input: { amountMinor: number; currency: strin
       address: 'No reportada',
       typeDoc: input.customerDocumentType,
       numberDoc: input.customerDocument,
-      callingCode: '+57',
+      callingCode: input.customerCallingCode,
       mobilePhone: input.customerPhone,
     },
   }
@@ -220,7 +265,7 @@ async function createEpaycoSession(input: { amountMinor: number; currency: strin
   const sessionBody = await session.json().catch(() => null)
   const sessionId = sessionBody?.data?.sessionId
   if (!session.ok || !sessionId) throw new Error(epaycoErrorMessage(sessionBody))
-  return { sessionId, raw: sessionBody }
+  return { sessionId }
 }
 
 function epaycoErrorMessage(body: unknown) {

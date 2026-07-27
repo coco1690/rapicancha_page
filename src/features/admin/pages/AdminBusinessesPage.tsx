@@ -1,12 +1,13 @@
 import { AppAutocomplete, AppButton, AppInput, AppSelect, AppTextArea } from '../../../shared/components/MuiPrimitives'
 import { useEffect, useMemo, type FormEvent } from 'react'
-import { Avatar, Box, Chip, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material'
+import { Avatar, Box, Chip, FormControlLabel, Stack, Switch, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material'
 import { AdminTableShell } from '../../../shared/components/AdminTableShell'
 import { FeedbackAlert } from '../../../shared/components/FeedbackAlert'
 import { ModuleHeader } from '../../../shared/components/ModuleHeader'
 import { RowActionsMenu } from '../../../shared/components/RowActionsMenu'
 import { getProviderLabel, paymentProviders } from '../../../services/payments/paymentProvider'
 import { useAdminBusinessesStore, type BusinessForm } from '../../../stores/admin/useAdminBusinessesStore'
+import { InternationalPhoneField } from '../../../shared/components/InternationalPhoneField'
 
 const stateOptions: Array<{ value: BusinessForm['state']; label: string }> = [
   { value: 'borrador', label: 'Borrador' },
@@ -114,7 +115,7 @@ export function AdminBusinessesPage() {
           <AppAutocomplete label="Plan *" required value={form.planId} options={plans.map((item) => ({ value: item.id, label: `${item.nombre} · ${item.limite_canchas} canchas` }))} onChange={(value) => setField('planId', value)} />
           <Field label="Estado"><AppSelect className="field" value={form.state} onChange={(event) => setField('state', event.target.value as BusinessForm['state'])}>{stateOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</AppSelect></Field>
           <Input field="email" label="Correo" form={form} setField={setField} type="email" />
-          <Input field="phone" label="Telefono" form={form} setField={setField} type="tel" />
+          <InternationalPhoneField countries={countries} countryCode={form.phoneCountryCode} phone={form.phone} onCountryChange={(value) => setField('phoneCountryCode', value)} onPhoneChange={(value) => setField('phone', value)} />
           <Input field="logoUrl" label="URL del logo" form={form} setField={setField} type="url" wide />
         </FormStep>}
         {formStep === 1 && <FormStep title="Ubicacion">
@@ -130,6 +131,8 @@ export function AdminBusinessesPage() {
           <AppAutocomplete label="Zona horaria" value={form.timezone} options={timezones.map((item) => ({ value: item, label: item }))} onChange={(value) => setField('timezone', value)} />
           <Input field="openingTime" label="Apertura" form={form} setField={setField} type="time" />
           <Input field="closingTime" label="Cierre" form={form} setField={setField} type="time" />
+          <InternationalPhoneField countries={countries} countryCode={form.whatsappCountryCode} phone={form.whatsappPhone} label="WhatsApp de reservas" onCountryChange={(value) => setField('whatsappCountryCode', value)} onPhoneChange={(value) => setField('whatsappPhone', value)} required={form.whatsappNotificationsActive} />
+          <Field label="Notificaciones WhatsApp"><FormControlLabel control={<Switch checked={form.whatsappNotificationsActive} onChange={(event) => setField('whatsappNotificationsActive', event.target.checked)} />} label={form.whatsappNotificationsActive ? 'Activas' : 'Inactivas'} /></Field>
           <Field label="Modulos activos" wide><AppTextArea className="field min-h-20" placeholder="reservas, torneos, iot" value={form.modules} onChange={(event) => setField('modules', event.target.value)} /></Field>
           <Field label="Descripcion" wide><AppTextArea className="field min-h-20" value={form.description} onChange={(event) => setField('description', event.target.value)} /></Field>
         </FormStep>}
@@ -153,4 +156,4 @@ export function AdminBusinessesPage() {
 
 function FormStep({ title, children }: { title: string; children: React.ReactNode }) { return <section><h3 className="text-lg font-black">{title}</h3><div className="mt-4 grid gap-4 md:grid-cols-2">{children}</div></section> }
 function Field({ label, wide = false, children }: { label: string; wide?: boolean; children: React.ReactNode }) { return <label className={`min-w-0 text-sm font-semibold ${wide ? 'md:col-span-2' : ''}`}>{label}<span className="mt-1.5 block">{children}</span></label> }
-function Input({ field, label, form, setField, type = 'text', wide = false }: { field: 'name' | 'slug' | 'email' | 'phone' | 'logoUrl' | 'address' | 'latitude' | 'longitude' | 'openingTime' | 'closingTime' | 'trialEndsAt' | 'providerAccountId' | 'providerOnboardingStatus'; label: string; form: BusinessForm; setField: <K extends keyof BusinessForm>(field: K, value: BusinessForm[K]) => void; type?: string; wide?: boolean }) { return <Field label={label} wide={wide}><AppInput className="field" required={label.includes('*')} type={type} value={form[field]} onChange={(event) => setField(field, event.target.value)} /></Field> }
+function Input({ field, label, form, setField, type = 'text', wide = false }: { field: 'name' | 'slug' | 'email' | 'phone' | 'whatsappPhone' | 'logoUrl' | 'address' | 'latitude' | 'longitude' | 'openingTime' | 'closingTime' | 'trialEndsAt' | 'providerAccountId' | 'providerOnboardingStatus'; label: string; form: BusinessForm; setField: <K extends keyof BusinessForm>(field: K, value: BusinessForm[K]) => void; type?: string; wide?: boolean }) { return <Field label={label} wide={wide}><AppInput className="field" required={label.includes('*')} type={type} value={form[field]} onChange={(event) => setField(field, event.target.value)} /></Field> }

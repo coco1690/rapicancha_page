@@ -5,6 +5,7 @@ import { ExpandMore } from '@mui/icons-material'
 import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useBusinessStore } from '../../../stores/useBusinessStore'
+import { addDaysToDateKey, dateFromKey, dateKeyInTimeZone } from '../../../shared/lib/date'
 import { formatMinorMoney } from '../../../shared/lib/money'
 import type { PublicCourt } from '../../../services/supabase/tables'
 import { SportIcon } from '../../../shared/components/SportIcon'
@@ -54,6 +55,7 @@ export function BusinessDetailPage() {
   const location = [business.ciudad, business.departamento].filter(Boolean).join(', ') || business.pais_codigo || 'Ubicacion por confirmar'
   const schedule = `${business.horario_apertura?.slice(0, 5) ?? '--'} - ${business.horario_cierre?.slice(0, 5) ?? '--'}`
   const selectedCourt = courts.find((court) => court.id === selectedCourtId) ?? null
+  const minimumDate = dateKeyInTimeZone(business.timezone ?? 'America/Bogota')
 
   return <Box component="main" sx={{ bgcolor: 'background.default', minHeight: 'calc(100vh - 69px)' }}>
     <Box sx={{ bgcolor: 'primary.main', color: 'common.white' }}>
@@ -89,7 +91,7 @@ export function BusinessDetailPage() {
       {courts.length === 0 && <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper', p: 3, textAlign: 'center' }}><Typography sx={{ fontWeight: 950 }}>No hay canchas publicas por ahora.</Typography><Typography color="text.secondary" sx={{ mt: 1 }}>Cuando el club active sus canchas, apareceran aqui.</Typography></Box>}
     </Container>
 
-    <ScheduleModal availabilityError={availabilityError} availabilityLoading={availabilityLoading} court={selectedCourt} date={selectedDate} dateLabel={selectedDateLabel()} onClose={closeSchedule} onDateChange={setSelectedDate} onSlotSelect={setSelectedSlotTime} open={Boolean(selectedCourt)} returnTo={`/negocios/${business.slug}`} selectedSlotTime={selectedSlotTime} slots={selectedCourt ? slotsForCourt(selectedCourt) : []} />
+    <ScheduleModal availabilityError={availabilityError} availabilityLoading={availabilityLoading} court={selectedCourt} date={selectedDate} dateLabel={selectedDateLabel()} minimumDate={minimumDate} onClose={closeSchedule} onDateChange={setSelectedDate} onSlotSelect={setSelectedSlotTime} open={Boolean(selectedCourt)} returnTo={`/negocios/${business.slug}`} selectedSlotTime={selectedSlotTime} slots={selectedCourt ? slotsForCourt(selectedCourt) : []} />
   </Box>
 }
 
@@ -114,11 +116,10 @@ function CourtRow({ businessCurrency, court, index, onChoose }: { businessCurren
   </Box>
 }
 
-function ScheduleModal({ availabilityError, availabilityLoading, court, date, dateLabel, onClose, onDateChange, onSlotSelect, open, returnTo, selectedSlotTime, slots }: { availabilityError: string; availabilityLoading: boolean; court: PublicCourt | null; date: string; dateLabel: string; onClose: () => void; onDateChange: (date: string) => Promise<void>; onSlotSelect: (time: string) => void; open: boolean; returnTo: string; selectedSlotTime: string; slots: Array<{ time: string; label: string; priceMinor: number; currency: string; available?: boolean }> }) {
+function ScheduleModal({ availabilityError, availabilityLoading, court, date, dateLabel, minimumDate, onClose, onDateChange, onSlotSelect, open, returnTo, selectedSlotTime, slots }: { availabilityError: string; availabilityLoading: boolean; court: PublicCourt | null; date: string; dateLabel: string; minimumDate: string; onClose: () => void; onDateChange: (date: string) => Promise<void>; onSlotSelect: (time: string) => void; open: boolean; returnTo: string; selectedSlotTime: string; slots: Array<{ time: string; label: string; priceMinor: number; currency: string; available?: boolean }> }) {
   const dayOptions = Array.from({ length: 5 }, (_, index) => {
-    const nextDate = new Date()
-    nextDate.setDate(nextDate.getDate() + index)
-    const value = nextDate.toISOString().slice(0, 10)
+    const value = addDaysToDateKey(minimumDate, index)
+    const nextDate = dateFromKey(value)
     return { value, label: index === 0 ? 'Hoy' : new Intl.DateTimeFormat('es-CO', { weekday: 'short', day: 'numeric' }).format(nextDate).replace('.', '') }
   })
   const groupedSlots = [
@@ -137,7 +138,7 @@ function ScheduleModal({ availabilityError, availabilityLoading, court, date, da
       <Stack spacing={1}>
         <Stack direction="row" spacing={0.75} sx={{ overflowX: 'auto', pb: 0.25 }}>
           {dayOptions.map((day) => <Button key={day.value} onClick={() => void onDateChange(day.value)} size="small" type="button" variant={date === day.value ? 'contained' : 'outlined'} sx={{ flexShrink: 0, fontSize: 12, minHeight: 32, minWidth: 62, px: 1 }}>{day.label}</Button>)}
-          <Box sx={{ flex: '0 0 128px', '& .MuiInputBase-root': { height: 32, fontSize: 12 }, '& input': { px: 1, py: 0.5 } }}><AppInput aria-label="Fecha" type="date" value={date} onChange={(event) => void onDateChange(event.target.value)} /></Box>
+          <Box sx={{ flex: '0 0 128px', '& .MuiInputBase-root': { height: 32, fontSize: 12 }, '& input': { px: 1, py: 0.5 } }}><AppInput aria-label="Fecha" min={minimumDate} type="date" value={date} onChange={(event) => { if (event.target.value >= minimumDate) void onDateChange(event.target.value) }} /></Box>
         </Stack>
         {availabilityLoading && <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'center', py: 3 }}><CircularProgress size={20} /><Typography color="text.secondary" sx={{ fontSize: 14 }}>Consultando horarios disponibles...</Typography></Stack>}
         {availabilityError && <Typography color="error" sx={{ border: 1, borderColor: 'error.light', borderRadius: 1, fontSize: 13, p: 1.25 }}>{availabilityError}</Typography>}
@@ -157,7 +158,7 @@ function ScheduleModal({ availabilityError, availabilityLoading, court, date, da
             </AccordionDetails>
           </Accordion>)}
         </Stack>}
-        {!availabilityLoading && slots.length === 0 && <Typography color="text.secondary" sx={{ fontSize: 14, py: 2, textAlign: 'center' }}>No hay horarios disponibles para este dia.</Typography>}
+        {!availabilityLoading && slots.length === 0 && <Typography color="text.secondary" sx={{ fontSize: 14, py: 2, textAlign: 'center' }}>{date === minimumDate ? 'No quedan horarios disponibles para hoy.' : 'No hay horarios disponibles para este dia.'}</Typography>}
         <Box sx={{ borderTop: 1, borderColor: 'divider', pt: 1.5 }}>
           {selectedSlot && <Typography color="text.secondary" sx={{ mb: 1, fontSize: 13 }}>Horario seleccionado: <strong>{selectedSlot.label}</strong> del <strong>{dateLabel}</strong></Typography>}
           <Button component={Link} disabled={availabilityLoading || !selectedSlot || !court} fullWidth onClick={onClose} size="large" to={checkoutUrl} variant="contained">{selectedPending ? 'Continuar pago' : 'Confirmar reserva'}</Button>

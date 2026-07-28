@@ -25,6 +25,7 @@ export function BusinessLayout() {
   const unreadNotifications = useBusinessStore((state) => state.unreadNotifications)
   const markNotificationRead = useBusinessStore((state) => state.markNotificationRead)
   const load = useBusinessStore((state) => state.load)
+  const refresh = useBusinessStore((state) => state.refresh)
   const clear = useBusinessStore((state) => state.clear)
   const subscribeReservationsRealtime = useBusinessStore((state) => state.subscribeReservationsRealtime)
   const navigate = useNavigate()
@@ -34,6 +35,18 @@ export function BusinessLayout() {
     if (!user?.id || !business?.id) return undefined
     return subscribeReservationsRealtime(user.id)
   }, [business?.id, subscribeReservationsRealtime, user?.id])
+  useEffect(() => {
+    if (!user?.id) return undefined
+    const refreshDashboard = () => { if (document.visibilityState === 'visible') void refresh(user.id) }
+    window.addEventListener('focus', refreshDashboard)
+    window.addEventListener('pageshow', refreshDashboard)
+    document.addEventListener('visibilitychange', refreshDashboard)
+    return () => {
+      window.removeEventListener('focus', refreshDashboard)
+      window.removeEventListener('pageshow', refreshDashboard)
+      document.removeEventListener('visibilitychange', refreshDashboard)
+    }
+  }, [refresh, user?.id])
   const handleSignOut = async () => { await signOut(); navigate('/acceso', { replace: true }) }
   if (loading) return <LoadingScreen label="Cargando panel..." />
 

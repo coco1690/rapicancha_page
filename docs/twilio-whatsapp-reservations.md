@@ -140,3 +140,10 @@ Antes de volver a ejecutar el bloque, revisar `cron.job` para evitar crear el mi
 El estado del mensaje no modifica el estado del pago ni de la reserva.
 
 Los indicativos se administran en `Admin > Ubicaciones > Paises`. Los formularios muestran la bandera y el indicativo por separado, pero guardan el telefono completo en formato E.164.
+
+## Diagnostico rapido
+
+- `pending`, `intentos = 0` y `twilio_message_sid = null`: el worker no fue invocado. Revisar `WHATSAPP_WORKER_SECRET`, el despliegue sin verificacion JWT y los logs de `epayco-webhook`.
+- `pending` o `failed`, `intentos >= 1` y `error_codigo` informado: el worker alcanzo Twilio y se debe corregir el error registrado.
+- `queued` con `twilio_message_sid`: Twilio acepto el mensaje; los callbacks posteriores deben actualizarlo a `sent`, `delivered` o `read`.
+- La falta de saldo solo puede diagnosticarse despues de que `intentos` sea mayor que cero y Twilio devuelva su codigo de error.

@@ -7,6 +7,7 @@ import { clearPendingCheckout, findPendingCheckoutsForCourts } from '../services
 import type { BusinessNotification, Cancha, CanchaTarifa, Ciudad, Departamento, Deporte, Negocio, Pais, Plan, PublicBusiness, PublicCourt, Reserva, Usuario } from '../services/supabase/tables'
 import { majorToMinor, minorToMajor } from '../shared/lib/money'
 import { splitPhone, toE164 } from '../shared/lib/phone'
+import { dateKeyInTimeZone, timeKeyInTimeZone } from '../shared/lib/date'
 
 export type CourtWithSport = Cancha & { deportes: { nombre: string; slug: string } | null }
 export type ReservationWithCourt = Reserva & { canchas: { nombre: string } | null }
@@ -25,7 +26,7 @@ const emptyProfile: BusinessProfileForm = { ownerName: '', ownerPhone: '', owner
 const emptyCourt: CourtForm = { name: '', sportId: '', description: '', capacity: '', surface: '', price: '', covered: false, lighting: true }
 const errorMessage = (error: unknown, fallback: string) => error instanceof Error ? error.message : fallback
 const slugify = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-const todayKey = () => new Date().toISOString().slice(0, 10)
+const todayKey = (timeZone = 'America/Bogota') => dateKeyInTimeZone(timeZone)
 const weekdayForDate = (date: string) => { const day = new Date(`${date}T12:00:00`).getDay(); return day === 0 ? 7 : day }
 const formatPublicDateLabel = (date: string) => {
   const parsedDate = new Date(`${date}T12:00:00`)
@@ -36,6 +37,13 @@ const addHour = (time: string) => `${String(Number(time.slice(0, 2)) + 1).padSta
 const formatSlotTime = (time: string) => time.slice(0, 5)
 const formatSlotLabel = (start: string, end: string) => `${formatSlotTime(start)} - ${formatSlotTime(end)}`
 const availabilityKey = (courtId: string, date: string) => `${courtId}:${date}`
+const futureSlots = (slots: PublicCourtSlot[], selectedDate: string, timeZone: string) => {
+  const today = dateKeyInTimeZone(timeZone)
+  if (selectedDate < today) return []
+  if (selectedDate > today) return slots
+  const currentTime = timeKeyInTimeZone(timeZone)
+  return slots.filter((slot) => slot.time > currentTime)
+}
 const buildSlots = (court: PublicCourt, rates: CanchaTarifa[], business: PublicBusiness | null, selectedDate: string): PublicCourtSlot[] => {
   const weekday = weekdayForDate(selectedDate)
   const courtRates = rates.filter((rate) => rate.cancha_id === court.id && rate.dias_semana.includes(weekday))
@@ -171,7 +179,8 @@ export const useBusinessStore = create<BusinessState>((set, get) => ({
     set({ publicLoading: true, error: null })
     try {
       const data = await businessRepository.fetchPublicBusiness(slug)
-      set({ publicBusiness: data.business, publicCourts: data.courts, publicRates: data.rates, publicAvailability: {}, publicAvailabilityError: '', publicSelectedCourtId: '', publicSelectedSlotTime: '', publicLoading: false })
+      const timeZone = data.business?.timezone ?? 'America/Bogota'
+      set({ publicBusiness: data.business, publicCourts: data.courts, publicRates: data.rates, publicAvailability: {}, publicAvailabilityError: '', publicSelectedDate: todayKey(timeZone), publicSelectedCourtId: '', publicSelectedSlotTime: '', publicLoading: false })
     } catch (error) {
       set({ publicBusiness: null, publicCourts: [], publicRates: [], publicAvailability: {}, publicAvailabilityError: '', publicSelectedCourtId: '', publicSelectedSlotTime: '', publicLoading: false, error: errorMessage(error, 'No se pudo cargar la pagina del negocio.') })
     }
@@ -213,13 +222,15 @@ export const useBusinessStore = create<BusinessState>((set, get) => ({
   openPublicSchedule: async (publicSelectedCourtId) => {
     const date = get().publicSelectedDate
     set({ publicSelectedCourtId, publicSelectedSlotTime: '' })
-    await get().loadPublicAvailability(publicSelectedCourtId, date)
+    await get().loadPublicAvailability(publicSelectedCourtId, date, true)
   },
   closePublicSchedule: () => set({ publicSelectedCourtId: '', publicSelectedSlotTime: '' }),
   setPublicSelectedSlotTime: (publicSelectedSlotTime) => set({ publicSelectedSlotTime }),
   publicSlotsForCourt: (court) => {
     const state = get()
-    return state.publicAvailability[availabilityKey(court.id ?? '', state.publicSelectedDate)] ?? buildSlots(court, state.publicRates, state.publicBusiness, state.publicSelectedDate)
+    const timeZone = state.publicBusiness?.timezone ?? 'America/Bogota'
+    const slots = state.publicAvailability[availabilityKey(court.id ?? '', state.publicSelectedDate)] ?? buildSlots(court, state.publicRates, state.publicBusiness, state.publicSelectedDate)
+    return futureSlots(slots, state.publicSelectedDate, timeZone)
   },
   publicSelectedDateLabel: () => formatPublicDateLabel(get().publicSelectedDate),
 }))

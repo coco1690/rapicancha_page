@@ -42,6 +42,7 @@ Deno.serve(async (request) => {
 
     const slots = buildSlots({
       date,
+      timeZone: business.timezone ?? 'America/Bogota',
       rates: rates ?? [],
       reservations: reservations ?? [],
       fallbackStart: business.horario_apertura ?? '06:00',
@@ -56,7 +57,9 @@ Deno.serve(async (request) => {
   }
 })
 
-function buildSlots(input: { date: string; rates: CourtRate[]; reservations: Reservation[]; fallbackStart: string; fallbackEnd: string; fallbackPrice: number; fallbackCurrency: string }): PublicSlot[] {
+function buildSlots(input: { date: string; timeZone: string; rates: CourtRate[]; reservations: Reservation[]; fallbackStart: string; fallbackEnd: string; fallbackPrice: number; fallbackCurrency: string }): PublicSlot[] {
+  const now = localDateTime(input.timeZone)
+  if (input.date < now.date) return []
   const weekday = weekdayForDate(input.date)
   const matchingRates = input.rates.filter((rate) => (rate.dias_semana ?? []).includes(weekday))
   const sources = matchingRates.length > 0 ? matchingRates : [{ hora_inicio: input.fallbackStart, hora_fin: input.fallbackEnd, precio_minor: input.fallbackPrice, moneda_codigo: input.fallbackCurrency, dias_semana: [weekday] }]
@@ -68,6 +71,10 @@ function buildSlots(input: { date: string; rates: CourtRate[]; reservations: Res
     while (current < limit && slots.size < 36) {
       const endTime = addHour(current)
       if (endTime <= limit) {
+        if (input.date === now.date && current <= now.time) {
+          current = endTime
+          continue
+        }
         slots.set(current, {
           time: current,
           endTime,
@@ -82,6 +89,22 @@ function buildSlots(input: { date: string; rates: CourtRate[]; reservations: Res
   }
 
   return Array.from(slots.values()).sort((a, b) => a.time.localeCompare(b.time))
+}
+
+function localDateTime(timeZone: string) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    day: '2-digit',
+    hour: '2-digit',
+    hourCycle: 'h23',
+    minute: '2-digit',
+    month: '2-digit',
+    timeZone,
+    year: 'numeric',
+  }).formatToParts(new Date()).map((part) => [part.type, part.value]))
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    time: `${parts.hour}:${parts.minute}`,
+  }
 }
 
 function overlapsReservation(start: string, end: string, reservations: Reservation[]) {

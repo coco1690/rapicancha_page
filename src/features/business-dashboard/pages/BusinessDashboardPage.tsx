@@ -3,6 +3,7 @@ import { Alert, Box, Button, Card, CardContent, Chip, Stack, Table, TableBody, T
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../../../stores/useAuthStore'
 import { useBusinessStore } from '../../../stores/useBusinessStore'
+import { addDaysToDateKey, dateFromKey, dateKeyInTimeZone } from '../../../shared/lib/date'
 
 export function BusinessDashboardPage() {
   const profile = useAuthStore((state) => state.profile)
@@ -14,14 +15,14 @@ export function BusinessDashboardPage() {
 
   if (!business) return <Box component="main" sx={{ display: 'grid', minHeight: 'calc(100vh - 64px)', placeItems: 'center', p: 3 }}><Card sx={{ width: '100%', maxWidth: 680 }}><CardContent sx={{ p: { xs: 3, sm: 5 } }}><Typography color="primary" sx={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase' }}>Configuracion inicial</Typography><Typography component="h1" sx={{ mt: 1 }} variant="h1">Activa el perfil de tu negocio</Typography><Typography color="text.secondary" sx={{ mt: 2, maxWidth: 520 }}>El alta debe venir desde una suscripcion o desde una prueba gratis asignada por administracion.</Typography><Button component={Link} endIcon={<ArrowForward />} sx={{ mt: 3 }} to="/negocio/perfil" variant="contained">Ver perfil</Button></CardContent></Card></Box>
 
-  const today = new Date().toISOString().slice(0, 10)
+  const timeZone = business.zona_horaria ?? business.timezone ?? 'America/Bogota'
+  const today = dateKeyInTimeZone(timeZone)
   const todayReservations = reservations.filter((item) => item.fecha_local === today && item.estado_reserva !== 'cancelada').length
   const activeCourts = courts.filter((court) => court.estado === 'activa' && court.activa).length
   const upcoming = reservations.filter((item) => item.fecha_local >= today && !['cancelada', 'expirada'].includes(item.estado_reserva)).slice(0, 6)
   const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date()
-    date.setDate(date.getDate() + index)
-    const key = date.toISOString().slice(0, 10)
+    const key = addDaysToDateKey(today, index)
+    const date = dateFromKey(key)
     return { key, label: new Intl.DateTimeFormat('es-CO', { weekday: 'short' }).format(date).replace('.', ''), count: reservations.filter((item) => item.fecha_local === key && item.estado_reserva !== 'cancelada').length }
   })
   const maxDaily = Math.max(...days.map((day) => day.count), 1)
@@ -29,7 +30,7 @@ export function BusinessDashboardPage() {
   return <Box component="main" sx={{ mx: 'auto', maxWidth: 1480, p: { xs: 2, sm: 3, lg: 4 } }}>
     <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: { sm: 'flex-end' }, justifyContent: 'space-between', gap: 1, mb: 3 }}>
       <Box><Typography color="text.secondary" sx={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase' }}>Operacion diaria</Typography><Typography component="h1" variant="h1">Resumen de hoy</Typography></Box>
-      <Typography color="text.secondary" variant="body2">{new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' }).format(new Date())}</Typography>
+      <Typography color="text.secondary" variant="body2">{new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone }).format(new Date())}</Typography>
     </Stack>
 
     {trialStatus.shouldWarn && <Alert severity="warning" sx={{ mb: 2.5 }} action={<Button color="inherit" component={Link} size="small" to="/negocio/perfil">Ver plan</Button>}>Tu prueba vence el {trialStatus.formattedDate}. Te quedan {trialStatus.daysLeft} dias para suscribirte a un plan.</Alert>}

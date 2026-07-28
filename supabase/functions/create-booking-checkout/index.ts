@@ -55,6 +55,8 @@ Deno.serve(async (request) => {
     ])
     if (businessError || ratesError || reservationsError) return json({ error: businessError?.message ?? ratesError?.message ?? reservationsError?.message }, 400)
     if (!business?.id) return json({ error: 'Club no disponible.' }, 404)
+    const timezone = business.zona_horaria ?? business.timezone ?? 'America/Bogota'
+    if (isPastLocalDateTime(input.date, input.time, timezone)) return json({ error: 'El horario seleccionado ya paso. Elige una fecha y hora disponibles.' }, 409)
 
     const { data: country, error: countryError } = await adminClient
       .from('paises')
@@ -79,7 +81,6 @@ Deno.serve(async (request) => {
     if (price.amountMinor <= 0) return json({ error: 'La cancha no tiene precio configurado.' }, 400)
 
     const reference = `RAPI-${crypto.randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase()}`
-    const timezone = business.zona_horaria ?? business.timezone ?? 'America/Bogota'
     const reservationInsert = {
       cancha_id: court.id,
       negocio_id: business.id,
@@ -296,6 +297,20 @@ function overlapsReservation(start: string, end: string, reservations: Reservati
 function weekdayForDate(date: string) {
   const day = new Date(`${date}T12:00:00`).getDay()
   return day === 0 ? 7 : day
+}
+
+function isPastLocalDateTime(date: string, time: string, timezone: string) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    day: '2-digit',
+    hour: '2-digit',
+    hourCycle: 'h23',
+    minute: '2-digit',
+    month: '2-digit',
+    timeZone: timezone,
+    year: 'numeric',
+  }).formatToParts(new Date()).map((part) => [part.type, part.value]))
+  const currentLocal = `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
+  return `${date}T${time.slice(0, 5)}` <= currentLocal
 }
 
 function addHour(time: string) {

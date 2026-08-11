@@ -26,6 +26,9 @@ type CheckoutContext = {
   returnTo: string
   courtName: string
   priceMinor: number
+  platformFeeMinor: number
+  processingFeeMinor: number
+  totalMinor: number
   currency: string
 }
 
@@ -39,6 +42,7 @@ type GuestCheckoutStore = {
   reference: string
   holdSecondsLeft: number
   hydrate: (context: Partial<CheckoutContext>) => void
+  refreshQuote: () => Promise<void>
   loadPhoneCountries: () => Promise<void>
   hydrateReference: (reference: string) => Promise<BookingPaymentStatus | 'missing'>
   setField: <K extends keyof CheckoutForm>(field: K, value: CheckoutForm[K]) => void
@@ -68,6 +72,9 @@ const emptyContext: CheckoutContext = {
   returnTo: '/',
   courtName: 'Cancha',
   priceMinor: 0,
+  platformFeeMinor: 0,
+  processingFeeMinor: 0,
+  totalMinor: 0,
   currency: 'COP',
 }
 
@@ -110,6 +117,16 @@ export const useGuestCheckoutStore = create<GuestCheckoutStore>((set, get) => ({
       message: pending ? 'Tienes un pago pendiente para este horario. Puedes continuarlo sin crear otra reserva.' : '',
     }
   }),
+  refreshQuote: async () => {
+    const { context } = get()
+    if (context.priceMinor <= 0 || !context.currency) return
+    try {
+      const quote = await checkoutRepository.quotePayment('reserva', context.currency, context.priceMinor)
+      set((state) => ({ context: { ...state.context, platformFeeMinor: quote.comision_plataforma_minor, processingFeeMinor: quote.cargo_pasarela_minor, totalMinor: quote.total_minor }, error: '' }))
+    } catch (error) {
+      set({ error: errorMessage(error) })
+    }
+  },
   hydrateReference: async (reference) => {
     const pending = findPendingCheckoutByReference(reference)
     set({ submitting: true, error: '', message: '' })
@@ -229,9 +246,12 @@ export const useGuestCheckoutStore = create<GuestCheckoutStore>((set, get) => ({
         ...state.context,
         courtName: checkout.courtName ?? state.context.courtName,
         priceMinor: checkout.priceMinor ?? state.context.priceMinor,
+        platformFeeMinor: checkout.platformFeeMinor ?? state.context.platformFeeMinor,
+        processingFeeMinor: checkout.processingFeeMinor ?? state.context.processingFeeMinor,
+        totalMinor: checkout.totalMinor ?? state.context.totalMinor,
         currency: checkout.currency ?? state.context.currency,
       }
-      savePendingCheckout({ reference: checkout.reservationReference, courtId: state.context.courtId, date: state.context.date, time: state.context.time, returnTo: state.context.returnTo, courtName: nextContext.courtName, priceMinor: nextContext.priceMinor, currency: nextContext.currency, sessionId: checkout.sessionId, test: checkout.test, createdAt: pendingCreatedAt, customerName: state.form.customerName.trim(), customerPhone: state.form.customerPhone.trim(), customerPhoneCountryCode: state.form.customerPhoneCountryCode, customerEmail: state.form.customerEmail.trim(), acceptsMarketing: state.form.acceptsMarketing, acceptsWhatsApp: state.form.acceptsWhatsApp, acceptsTerms: state.form.acceptsTerms, termsVersion: CURRENT_TERMS_VERSION })
+      savePendingCheckout({ reference: checkout.reservationReference, courtId: state.context.courtId, date: state.context.date, time: state.context.time, returnTo: state.context.returnTo, courtName: nextContext.courtName, priceMinor: nextContext.priceMinor, platformFeeMinor: nextContext.platformFeeMinor, processingFeeMinor: nextContext.processingFeeMinor, totalMinor: nextContext.totalMinor, currency: nextContext.currency, sessionId: checkout.sessionId, test: checkout.test, createdAt: pendingCreatedAt, customerName: state.form.customerName.trim(), customerPhone: state.form.customerPhone.trim(), customerPhoneCountryCode: state.form.customerPhoneCountryCode, customerEmail: state.form.customerEmail.trim(), acceptsMarketing: state.form.acceptsMarketing, acceptsWhatsApp: state.form.acceptsWhatsApp, acceptsTerms: state.form.acceptsTerms, termsVersion: CURRENT_TERMS_VERSION })
       set({ context: nextContext, reference: checkout.reservationReference, holdSecondsLeft: holdSecondsFromCreatedAt(pendingCreatedAt), message: 'Abriendo ePayco...' })
       await openEpaycoCheckout({
         sessionId: checkout.sessionId,
@@ -270,6 +290,9 @@ function contextFromPending(pending: NonNullable<ReturnType<typeof findPendingCh
     returnTo: pending.returnTo || fallback.returnTo || '/',
     courtName: pending.courtName ?? fallback.courtName,
     priceMinor: pending.priceMinor ?? fallback.priceMinor,
+    platformFeeMinor: pending.platformFeeMinor ?? fallback.platformFeeMinor,
+    processingFeeMinor: pending.processingFeeMinor ?? fallback.processingFeeMinor,
+    totalMinor: pending.totalMinor ?? fallback.totalMinor,
     currency: pending.currency ?? fallback.currency,
   }
 }

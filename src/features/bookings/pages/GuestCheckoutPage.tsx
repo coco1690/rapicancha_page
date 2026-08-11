@@ -20,6 +20,7 @@ export function GuestCheckoutPage() {
   const reference = useGuestCheckoutStore((state) => state.reference)
   const holdSecondsLeft = useGuestCheckoutStore((state) => state.holdSecondsLeft)
   const hydrate = useGuestCheckoutStore((state) => state.hydrate)
+  const refreshQuote = useGuestCheckoutStore((state) => state.refreshQuote)
   const loadPhoneCountries = useGuestCheckoutStore((state) => state.loadPhoneCountries)
   const hydrateReference = useGuestCheckoutStore((state) => state.hydrateReference)
   const setField = useGuestCheckoutStore((state) => state.setField)
@@ -57,6 +58,8 @@ export function GuestCheckoutPage() {
     return () => window.removeEventListener('pageshow', verifyReference)
   }, [hydrate, hydrateReference, navigate, params.bookingReference, searchParams])
 
+  useEffect(() => { void refreshQuote() }, [context.currency, context.priceMinor, refreshQuote])
+
   useEffect(() => {
     tickHold()
     const intervalId = window.setInterval(tickHold, 1000)
@@ -72,8 +75,7 @@ export function GuestCheckoutPage() {
     navigate(nextPath, { replace: true })
   }
 
-  const priceLabel = context.priceMinor > 0 ? formatMinorMoney(context.priceMinor, context.currency) : 'Por confirmar'
-  const serviceFeeLabel = context.priceMinor > 0 ? formatMinorMoney(Math.round(context.priceMinor * 0.1), context.currency) : 'Por confirmar'
+  const priceLabel = context.totalMinor > 0 ? formatMinorMoney(context.totalMinor, context.currency) : 'Por confirmar'
   const holdLabel = reference ? formatCountdown(holdSecondsLeft) : '7 min'
 
   return <Box component="main" sx={{ bgcolor: 'background.default', minHeight: 'calc(100vh - 68px)', py: { xs: 1.5, sm: 3, md: 7 } }}>
@@ -93,9 +95,11 @@ export function GuestCheckoutPage() {
               <SummaryItem icon={<PaymentsOutlined />} label="Total" value={priceLabel} />
               <SummaryItem icon={<LockOutlined />} label="Tiempo" value={holdLabel} />
             </Box>
-            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', bgcolor: 'action.hover', justifyContent: 'space-between', mb: { xs: 1.5, sm: 2.5 }, px: { xs: 1.25, sm: 1.5 }, py: 1 }}>
-              <Typography color="text.secondary" sx={{ fontSize: { xs: 11.5, sm: 13 }, lineHeight: 1.4 }}>Cargo de servicio y procesamiento incluido (10 %)</Typography>
-              <Typography sx={{ flexShrink: 0, fontSize: { xs: 12, sm: 13.5 }, fontWeight: 900 }}>{serviceFeeLabel}</Typography>
+            <Stack spacing={0.75} sx={{ bgcolor: 'action.hover', mb: { xs: 1.5, sm: 2.5 }, px: { xs: 1.25, sm: 1.5 }, py: 1.25 }}>
+              <PriceRow label="Precio de la cancha" value={context.priceMinor} currency={context.currency} />
+              <PriceRow label="Servicio Rapicancha" value={context.platformFeeMinor} currency={context.currency} />
+              <PriceRow label="Cargo administrativo de pago" value={context.processingFeeMinor} currency={context.currency} />
+              <PriceRow emphasis label="Total a pagar" value={context.totalMinor} currency={context.currency} />
             </Stack>
 
             <Box component="form" onSubmit={submit}>
@@ -137,6 +141,10 @@ export function GuestCheckoutPage() {
 
 function SummaryItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return <Stack direction="row" spacing={{ xs: 0.75, sm: 1.25 }} sx={{ alignItems: 'center', border: 1, borderColor: 'divider', borderRadius: 1.5, minWidth: 0, p: { xs: 1, sm: 1.5 } }}><Box sx={{ color: 'primary.main', display: 'grid', flexShrink: 0, placeItems: 'center', '& .MuiSvgIcon-root': { fontSize: { xs: 18, sm: 22 } } }}>{icon}</Box><Box sx={{ minWidth: 0 }}><Typography color="text.secondary" sx={{ fontSize: { xs: 10.5, sm: 12 }, fontWeight: 800 }}>{label}</Typography><Typography sx={{ fontSize: { xs: 12.5, sm: 15 }, fontWeight: 900, lineHeight: 1.15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</Typography></Box></Stack>
+}
+
+function PriceRow({ label, value, currency, emphasis = false }: { label: string; value: number; currency: string; emphasis?: boolean }) {
+  return <Stack direction="row" sx={{ justifyContent: 'space-between' }}><Typography color={emphasis ? 'text.primary' : 'text.secondary'} sx={{ fontSize: { xs: 11.5, sm: 13 }, fontWeight: emphasis ? 900 : 500 }}>{label}</Typography><Typography sx={{ fontSize: { xs: 12, sm: 13.5 }, fontWeight: emphasis ? 950 : 800 }}>{value > 0 ? formatMinorMoney(value, currency) : '$0'}</Typography></Stack>
 }
 
 function nextHour(time: string) {

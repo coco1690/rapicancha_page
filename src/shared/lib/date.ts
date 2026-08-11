@@ -30,3 +30,33 @@ export function dateFromKey(dateKey: string) {
   const [year, month, day] = dateKey.split('-').map(Number)
   return new Date(year, month - 1, day, 12)
 }
+
+function zonedParts(date: Date, timeZone: string) {
+  return Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    day: '2-digit', hour: '2-digit', hourCycle: 'h23', minute: '2-digit',
+    month: '2-digit', second: '2-digit', timeZone, year: 'numeric',
+  }).formatToParts(date).map((part) => [part.type, part.value]))
+}
+
+export function isoToZonedDateTimeInput(value: string | null, timeZone: string) {
+  if (!value) return ''
+  const parts = zonedParts(new Date(value), timeZone)
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
+}
+
+export function zonedDateTimeInputToIso(value: string, timeZone: string) {
+  if (!value) return null
+  const [datePart, timePart] = value.split('T')
+  const [year, month, day] = datePart.split('-').map(Number)
+  const [hour, minute] = timePart.split(':').map(Number)
+  const desiredUtc = Date.UTC(year, month - 1, day, hour, minute)
+  let instant = desiredUtc
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const parts = zonedParts(new Date(instant), timeZone)
+    const representedUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute))
+    instant -= representedUtc - desiredUtc
+  }
+
+  return new Date(instant).toISOString()
+}

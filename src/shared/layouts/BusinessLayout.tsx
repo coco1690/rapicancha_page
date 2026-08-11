@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { CalendarMonthOutlined, DashboardOutlined, SettingsOutlined, SportsSoccerOutlined } from '@mui/icons-material'
+import { CalendarMonthOutlined, DashboardOutlined, EventAvailableOutlined, SettingsOutlined, SportsSoccerOutlined } from '@mui/icons-material'
 import { Alert, Button } from '@mui/material'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/useAuthStore'
@@ -11,6 +11,7 @@ const navigation: DashboardNavItem[] = [
   { to: '/negocio', label: 'Resumen', icon: <DashboardOutlined />, group: 'Principal' },
   { to: '/negocio/reservas', label: 'Reservas', icon: <CalendarMonthOutlined />, group: 'Principal' },
   { to: '/negocio/canchas', label: 'Canchas', icon: <SportsSoccerOutlined />, group: 'Gestion' },
+  { to: '/negocio/eventos', label: 'Eventos', icon: <EventAvailableOutlined />, group: 'Gestion' },
   { to: '/negocio/perfil', label: 'Mi negocio', icon: <SettingsOutlined />, group: 'Gestion' },
 ]
 

@@ -16,7 +16,7 @@ Deno.serve(async (request) => {
   try {
     const body = await request.json().catch(() => null) as ReconcileBody | null
     const reference = body?.reference?.trim().toUpperCase() ?? ''
-    if (!/^RAPI-[A-Z0-9]{16}$/.test(reference)) return json({ error: 'Referencia invalida.' }, 400)
+    if (!/^(RAPI-[A-Z0-9]{16}|EVT-[A-Z0-9]{20})$/.test(reference)) return json({ error: 'Referencia invalida.' }, 400)
 
     const providerReference = readProviderReference(body?.providerResponse)
     if (!providerReference) return json({ ok: true, confirmed: false, status: 'pending', reason: 'ePayco no entrego la referencia de validacion.' }, 200)
@@ -32,14 +32,14 @@ Deno.serve(async (request) => {
     const adminClient = createClient(supabaseUrl, secretKey, { auth: { autoRefreshToken: false, persistSession: false } })
     const { data: payment, error: paymentError } = await adminClient
       .from('pagos')
-      .select('id, reserva_id, monto_total_minor, moneda, provider_payload')
+      .select('id, reserva_id, inscripcion_evento_id, monto_total_minor, moneda, provider_payload')
       .eq('provider_reference', reference)
       .maybeSingle()
     if (paymentError) return json({ error: paymentError.message }, 400)
-    if (!payment?.id || !payment.reserva_id) return json({ error: 'Pago no encontrado.' }, 404)
+    if (!payment?.id || (!payment.reserva_id && !payment.inscripcion_evento_id)) return json({ error: 'Pago no encontrado.' }, 404)
 
-    if (!belongsToPayment(transaction, reference, payment.provider_payload)) return json({ error: 'La transaccion no pertenece a esta reserva.' }, 409)
-    if (!matchesAmount(transaction, payment.monto_total_minor, payment.moneda)) return json({ error: 'El monto o la moneda no coincide con la reserva.' }, 409)
+    if (!belongsToPayment(transaction, reference, payment.provider_payload)) return json({ error: 'La transaccion no pertenece a este pago.' }, 409)
+    if (!matchesAmount(transaction, payment.monto_total_minor, payment.moneda)) return json({ error: 'El monto o la moneda no coincide con el pago.' }, 409)
 
     const approved = isApproved(transaction)
     const refunded = isRefunded(transaction)
@@ -48,6 +48,7 @@ Deno.serve(async (request) => {
 
     const paymentStatus = approved ? 'paid' : refunded ? 'refunded' : 'failed'
     const reservationStatus = approved ? 'confirmada' : refunded ? 'reembolsada' : 'expirada'
+    const eventRegistrationStatus = approved ? 'pagada' : refunded ? 'reembolsada' : 'cancelada'
     const transactionId = readTransactionId(transaction) || providerReference
     const { error: updatePaymentError } = await adminClient.from('pagos').update({
       estado: paymentStatus,
@@ -58,9 +59,15 @@ Deno.serve(async (request) => {
       },
     }).eq('id', payment.id)
     if (updatePaymentError) return json({ error: updatePaymentError.message }, 400)
-    const { error: updateReservationError } = await adminClient.from('reservas').update({ estado_reserva: reservationStatus }).eq('id', payment.reserva_id)
-    if (updateReservationError) return json({ error: updateReservationError.message }, 400)
-    if (approved) {
+    if (payment.reserva_id) {
+      const { error: updateReservationError } = await adminClient.from('reservas').update({ estado_reserva: reservationStatus }).eq('id', payment.reserva_id)
+      if (updateReservationError) return json({ error: updateReservationError.message }, 400)
+    }
+    if (payment.inscripcion_evento_id) {
+      const { error: updateRegistrationError } = await adminClient.from('inscripciones_evento').update({ estado: eventRegistrationStatus }).eq('id', payment.inscripcion_evento_id)
+      if (updateRegistrationError) return json({ error: updateRegistrationError.message }, 400)
+    }
+    if (approved && payment.reserva_id) {
       await createBusinessBookingNotification(adminClient, payment.reserva_id)
       EdgeRuntime.waitUntil(requestWhatsAppDispatch(supabaseUrl))
     }

@@ -14,7 +14,7 @@ const sections = [
   {
     title: '2. Servicios de Rapicancha',
     paragraphs: [
-      'Rapicancha ofrece software como servicio (SaaS) para que los clubes gestionen sus sedes, canchas, tarifas, horarios, reservas, torneos, comunicaciones y operaciones habilitadas en su plan. Tambien opera un marketplace que permite a los clientes consultar disponibilidad y solicitar reservas sin necesidad de crear una cuenta.',
+      'Rapicancha ofrece software como servicio (SaaS) para que los clubes gestionen sus sedes, canchas, tarifas, horarios, reservas, torneos, eventos deportivos, participantes, inscripciones, comunicaciones y operaciones habilitadas en su plan. Tambien opera un marketplace que permite a los clientes consultar disponibilidad e inscribirse o reservar sin necesidad de crear una cuenta.',
       'Rapicancha facilita la interaccion, el checkout y el registro del pago, pero el club publicado en cada reserva es el prestador directo del servicio deportivo y el responsable de la cancha, sus instalaciones, horarios, seguridad, calidad y atencion al cliente.',
     ],
   },
@@ -36,8 +36,8 @@ const sections = [
   {
     title: '5. Precio, cargo de servicio y pasarela de pago',
     paragraphs: [
-      'Antes de pagar, el checkout informa el precio total de la reserva en la moneda aplicable. El total puede incorporar un cargo de servicio o administracion de Rapicancha por el uso de la plataforma y el procesamiento transaccional. Actualmente la comision de servicio de la plataforma corresponde al diez por ciento (10 %) del valor pagado por cada reserva, salvo que antes del pago se informe expresamente una condicion diferente.',
-      'El cliente asume el cargo de servicio informado en el checkout. Este cargo puede cubrir, entre otros conceptos, infraestructura tecnologica, operacion de la reserva y costos asociados a la pasarela de pago. No se cobraran conceptos adicionales que no hayan sido informados antes de la confirmacion.',
+      'Antes de pagar, el checkout informa el precio total en la moneda aplicable. El total puede incorporar una comision de servicio de Rapicancha por el uso de la plataforma. Su porcentaje depende del tipo de operacion y sera el mostrado expresamente antes de confirmar el pago.',
+      'El comprador asume el cargo de servicio de Rapicancha y el cargo administrativo de procesamiento informado en el checkout. Son conceptos separados: el primero remunera el uso de la plataforma y el segundo cubre la tarifa e impuestos cobrados por la pasarela de pago. Ambos se muestran antes de confirmar una reserva, inscripcion a un evento o suscripcion.',
       'Los pagos son procesados por proveedores externos, actualmente ePayco. El cliente tambien queda sujeto a las condiciones operativas y de seguridad de la pasarela seleccionada. Rapicancha no almacena los datos completos de tarjetas ni las credenciales financieras del cliente.',
     ],
   },
@@ -67,6 +67,7 @@ const sections = [
     paragraphs: [
       'Rapicancha puede enviar mensajes necesarios para ejecutar la reserva, confirmar pagos, informar cambios o atender solicitudes, de acuerdo con las autorizaciones otorgadas y la ley. Las comunicaciones promocionales son opcionales y pueden rechazarse.',
       'Los datos se utilizan para operar la cuenta, la reserva, el pago, el soporte y las obligaciones legales. La autorizacion para recibir confirmaciones por WhatsApp y la autorizacion de marketing se solicitan por separado.',
+      'En eventos deportivos pueden solicitarse datos de identificación, nacimiento, contacto y emergencia necesarios para validar categorías, evitar duplicados, gestionar seguridad, acreditación, resultados y atención durante el evento. El organizador solo debe utilizarlos para estas finalidades y protegerlos conforme a la normativa aplicable.',
     ],
   },
   {
@@ -94,7 +95,7 @@ export function TermsAndConditionsPage() {
         <Typography sx={{ color: 'rgba(255,255,255,.72)', fontSize: { xs: 15, sm: 17 }, lineHeight: 1.65, mt: 2, maxWidth: 720 }}>
           Condiciones para clubes que contratan el SaaS y clientes que reservan servicios deportivos en Rapicancha.
         </Typography>
-        <Typography sx={{ color: 'rgba(255,255,255,.55)', fontSize: 13, mt: 2 }}>Version {CURRENT_TERMS_VERSION} - Vigentes desde el 27 de julio de 2026</Typography>
+        <Typography sx={{ color: 'rgba(255,255,255,.55)', fontSize: 13, mt: 2 }}>Version {CURRENT_TERMS_VERSION} - Vigentes desde el 11 de agosto de 2026</Typography>
       </Container>
     </Box>
 

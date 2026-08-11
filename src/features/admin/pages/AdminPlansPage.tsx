@@ -69,6 +69,7 @@ export function AdminPlansPage() {
                   <Feature text={`Facturación en ${currency}`} />
                   <Feature text="Gestión de sedes y horarios" />
                   <Feature text="Soporte administrativo" />
+                  <Feature text={plan.eventos_habilitados ? `${plan.limite_eventos ?? 'Sin limite de'} eventos activos` : 'Eventos no incluidos'} />
                 </Stack>
               </CardContent>
               <CardActions sx={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between', p: 3.5, pt: 0 }}>
@@ -90,6 +91,8 @@ export function AdminPlansPage() {
             </Box>
             <FieldLabel label={`Precio mensual (${form.currency})`}><AppInput className="field" required min="0" step={moneyInputStep(form.currency)} type="number" value={form.price} onChange={(event) => setField('price', event.target.value)} /></FieldLabel>
             <FieldLabel label="Descripción"><AppTextArea className="field" rows={3} value={form.description} onChange={(event) => setField('description', event.target.value)} /></FieldLabel>
+            <Box sx={{ borderBlock: 1, borderColor: 'divider', py: 1 }}><Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}><Box><Typography sx={{ fontSize: 14, fontWeight: 800 }}>Módulo de eventos</Typography><Typography color="text.secondary" variant="caption">Running, ciclismo, natación y otros deportes.</Typography></Box><Switch checked={form.eventsEnabled} onChange={(event) => setField('eventsEnabled', event.target.checked)} /></Stack></Box>
+            {form.eventsEnabled && <PlanEventInput field="eventLimit" label="Eventos activos" form={form} setField={setField} />}
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}><AppInput checked={form.active} type="checkbox" onChange={(event) => setField('active', event.target.checked)} /><Typography sx={{ fontSize: 14, fontWeight: 700 }}>Plan activo</Typography></Stack>
             <FeedbackAlert message={error} />
           </Stack>
@@ -109,4 +112,8 @@ function FieldLabel({ label, children }: { label: string; children: React.ReactN
 
 function PlanInput({ field, label, form, setField, type = 'text' }: { field: 'name' | 'limit' | 'currency'; label: string; form: PlanForm; setField: <K extends keyof PlanForm>(field: K, value: PlanForm[K]) => void; type?: string }) {
   return <FieldLabel label={label}><AppInput className="field" required type={type} value={form[field]} onChange={(event) => setField(field, event.target.value)} /></FieldLabel>
+}
+
+function PlanEventInput({ field, label, form, setField }: { field: 'eventLimit'; label: string; form: PlanForm; setField: <K extends keyof PlanForm>(field: K, value: PlanForm[K]) => void }) {
+  return <FieldLabel label={label}><AppInput className="field" min="1" placeholder="Sin límite" type="number" value={form[field]} onChange={(event) => setField(field, event.target.value)} /></FieldLabel>
 }

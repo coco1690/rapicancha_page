@@ -30,7 +30,7 @@ Deno.serve(async (request) => {
     const adminClient = createClient(supabaseUrl, secretKey, { auth: { autoRefreshToken: false, persistSession: false } })
     const { data: payment, error: paymentError } = await adminClient
       .from('pagos')
-      .select('id, reserva_id, monto_total_minor, moneda, provider_payload')
+      .select('id, reserva_id, inscripcion_evento_id, monto_total_minor, moneda, provider_payload')
       .or(referenceFilter)
       .maybeSingle()
 
@@ -45,6 +45,7 @@ Deno.serve(async (request) => {
     const failed = isRejected(payload)
     const nextPaymentStatus = paid ? 'paid' : refunded ? 'refunded' : failed ? 'failed' : 'pending'
     const nextReservationStatus = paid ? 'confirmada' : refunded ? 'reembolsada' : failed ? 'expirada' : 'pendiente_pago'
+    const nextEventRegistrationStatus = paid ? 'pagada' : refunded ? 'reembolsada' : failed ? 'cancelada' : 'pendiente_pago'
 
     const { error: paymentUpdateError } = await adminClient.from('pagos').update({
       estado: nextPaymentStatus,
@@ -67,6 +68,16 @@ Deno.serve(async (request) => {
       if (paid) {
         await createBusinessBookingNotification(adminClient, payment.reserva_id)
         EdgeRuntime.waitUntil(requestWhatsAppDispatch(supabaseUrl))
+      }
+    }
+
+    if (payment.inscripcion_evento_id) {
+      const { error: registrationUpdateError } = await adminClient
+        .from('inscripciones_evento')
+        .update({ estado: nextEventRegistrationStatus })
+        .eq('id', payment.inscripcion_evento_id)
+      if (registrationUpdateError) {
+        throw new Error(`No se pudo actualizar la inscripcion: ${registrationUpdateError.message}`)
       }
     }
 

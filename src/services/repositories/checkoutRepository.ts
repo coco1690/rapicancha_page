@@ -26,7 +26,22 @@ export type CreateBookingCheckoutResponse = {
   test: boolean
   courtName?: string
   priceMinor?: number
+  platformFeeMinor?: number
+  processingFeeMinor?: number
+  totalMinor?: number
   currency?: string
+}
+
+export type PaymentQuote = {
+  precio_base_minor: number
+  comision_plataforma_minor: number
+  subtotal_minor: number
+  cargo_pasarela_minor: number
+  total_minor: number
+  tasa_plataforma: number
+  tasa_pasarela: number
+  cargo_fijo_pasarela_minor: number
+  impuesto_pasarela: number
 }
 
 type ReconcilePaymentResponse = { ok?: boolean; confirmed?: boolean; status?: 'paid' | 'pending' | 'failed' | 'refunded'; error?: string }
@@ -54,6 +69,16 @@ function client() {
 }
 
 export const checkoutRepository = {
+  quotePayment: async (paymentType: 'reserva' | 'evento' | 'torneo' | 'suscripcion', currency: string, baseMinor: number) => {
+    const { data, error } = await client().rpc('cotizar_compra', {
+      p_proveedor: 'epayco', p_tipo_pago: paymentType, p_moneda_codigo: currency,
+      p_precio_base_minor: baseMinor,
+    })
+    if (error) throw error
+    const quote = data?.[0]
+    if (!quote) throw new Error('No se pudo calcular el total del pago.')
+    return quote
+  },
   fetchPhoneCountries: async (): Promise<Pais[]> => {
     const { data, error } = await client().from('paises').select('*').eq('activo', true).not('indicativo_pais', 'is', null).order('nombre')
     if (error) throw error

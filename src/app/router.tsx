@@ -33,7 +33,11 @@ const AdminLocationsPage = lazy(() => import('../features/admin/pages/AdminLocat
 const AdminSportsPage = lazy(() => import('../features/admin/pages/AdminSportsPage').then((module) => ({ default: module.AdminSportsPage })))
 const AdminCompetitionsPage = lazy(() => import('../features/admin/pages/AdminCompetitionsPage').then((module) => ({ default: module.AdminCompetitionsPage })))
 const AdminOperationsPage = lazy(() => import('../features/admin/pages/AdminOperationsPage').then((module) => ({ default: module.AdminOperationsPage })))
+const AdminPaymentSettingsPage = lazy(() => import('../features/admin/pages/AdminPaymentSettingsPage').then((module) => ({ default: module.AdminPaymentSettingsPage })))
 const AdminSupportPage = lazy(() => import('../features/admin/pages/AdminSupportPage').then((module) => ({ default: module.AdminSupportPage })))
+const EventsPage = lazy(() => import('../features/events/pages/EventsPage').then((module) => ({ default: module.EventsPage })))
+const PublicEventPage = lazy(() => import('../features/events/pages/PublicEventPage').then((module) => ({ default: module.PublicEventPage })))
+const EventPaymentResultPage = lazy(() => import('../features/events/pages/EventPaymentResultPage').then((module) => ({ default: module.EventPaymentResultPage })))
 
 export function AppRouter() {
   return (
@@ -42,6 +46,8 @@ export function AppRouter() {
       <Route element={<PublicLayout />}>
         <Route index element={<MarketplacePage />} />
         <Route path="negocios/:slug" element={<BusinessDetailPage />} />
+        <Route path="eventos/:businessSlug/:eventSlug" element={<PublicEventPage />} />
+        <Route path="eventos/inscripciones/:eventReference/resultado" element={<EventPaymentResultPage />} />
         <Route path="checkout/:bookingReference" element={<GuestCheckoutPage />} />
         <Route path="checkout/:bookingReference/respuesta" element={<BookingPaymentResultPage />} />
         <Route path="pago/respuesta" element={<EpaycoResponsePage />} />
@@ -65,6 +71,7 @@ export function AppRouter() {
             <Route path="perfil" element={<BusinessProfilePage />} />
             <Route path="canchas" element={<CourtsPage />} />
             <Route path="reservas" element={<ReservationsPage />} />
+            <Route path="eventos" element={<EventsPage scope="business" />} />
           </Route>
         </Route>
         <Route element={<RoleRoute allowed={['admin']} />}>
@@ -76,7 +83,9 @@ export function AppRouter() {
             <Route path="ubicaciones" element={<AdminLocationsPage />} />
             <Route path="deportes" element={<AdminSportsPage />} />
             <Route path="competiciones" element={<AdminCompetitionsPage />} />
+            <Route path="eventos" element={<EventsPage scope="admin" />} />
             <Route path="operaciones" element={<AdminOperationsPage />} />
+            <Route path="comisiones" element={<AdminPaymentSettingsPage />} />
             <Route path="soporte" element={<AdminSupportPage />} />
           </Route>
         </Route>

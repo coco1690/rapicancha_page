@@ -6,6 +6,9 @@ export type PendingCheckout = {
   returnTo: string
   courtName?: string
   priceMinor?: number
+  platformFeeMinor?: number
+  processingFeeMinor?: number
+  totalMinor?: number
   currency?: string
   sessionId: string
   test: boolean

@@ -19,6 +19,17 @@ type CheckoutBody = {
 
 type CourtRate = { hora_inicio: string; hora_fin: string; precio_minor: number | null; moneda_codigo: string | null; dias_semana: number[] | null }
 type Reservation = { hora_inicio_local: string; hora_fin_local: string; estado_reserva: string; creado_en: string }
+type PaymentQuote = {
+  precio_base_minor: number
+  comision_plataforma_minor: number
+  subtotal_minor: number
+  cargo_pasarela_minor: number
+  total_minor: number
+  tasa_plataforma: number
+  tasa_pasarela: number
+  cargo_fijo_pasarela_minor: number
+  impuesto_pasarela: number
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,7 +38,7 @@ const corsHeaders = {
 const blockingStatuses = ['pendiente_pago', 'confirmada']
 const bookingHoldMinutes = Number(Deno.env.get('BOOKING_HOLD_MINUTES') ?? '7')
 const bookingHoldMs = bookingHoldMinutes * 60 * 1000
-const currentTermsVersion = '2026-07-27'
+const currentTermsVersion = '2026-08-11'
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') return json({ ok: true }, 200)
@@ -80,6 +91,16 @@ Deno.serve(async (request) => {
     })
     if (price.amountMinor <= 0) return json({ error: 'La cancha no tiene precio configurado.' }, 400)
 
+    const { data: quoteRows, error: quoteError } = await adminClient.rpc('cotizar_compra', {
+      p_proveedor: 'epayco',
+      p_tipo_pago: 'reserva',
+      p_moneda_codigo: price.currency,
+      p_precio_base_minor: price.amountMinor,
+    })
+    if (quoteError) throw quoteError
+    const quote = quoteRows?.[0] as PaymentQuote | undefined
+    if (!quote) throw new Error('No se pudo calcular el total del pago.')
+
     const reference = `RAPI-${crypto.randomUUID().replaceAll('-', '').slice(0, 16).toUpperCase()}`
     const reservationInsert = {
       cancha_id: court.id,
@@ -99,7 +120,14 @@ Deno.serve(async (request) => {
       terminos_version: input.termsVersion,
       terminos_aceptados_en: new Date().toISOString(),
       moneda: price.currency,
-      precio_total_minor: price.amountMinor,
+      precio_base_minor: quote.precio_base_minor,
+      comision_plataforma_minor: quote.comision_plataforma_minor,
+      tasa_plataforma_snapshot: quote.tasa_plataforma,
+      cargo_pasarela_minor: quote.cargo_pasarela_minor,
+      tasa_pasarela_snapshot: quote.tasa_pasarela,
+      cargo_fijo_pasarela_snapshot_minor: quote.cargo_fijo_pasarela_minor,
+      impuesto_pasarela_snapshot: quote.impuesto_pasarela,
+      precio_total_minor: quote.total_minor,
       timezone,
       estado_reserva: 'pendiente_pago',
       origen: 'web',
@@ -110,8 +138,6 @@ Deno.serve(async (request) => {
     if (reservationError) return json({ error: reservationError.message }, 400)
     reservationId = reservation.id
 
-    const platformFeeMinor = Math.round(price.amountMinor * 0.1)
-    const netMinor = price.amountMinor - platformFeeMinor
     const providerInvoice = `${reference}-${crypto.randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase()}`
     const { data: payment, error: paymentError } = await adminClient.from('pagos').insert({
       negocio_id: business.id,
@@ -119,9 +145,15 @@ Deno.serve(async (request) => {
       tipo_pago: 'reserva',
       estado: 'pending',
       moneda: price.currency,
-      monto_total_minor: price.amountMinor,
-      comision_plataforma_minor: platformFeeMinor,
-      neto_negocio_minor: netMinor,
+      monto_base_minor: quote.precio_base_minor,
+      monto_total_minor: quote.total_minor,
+      comision_plataforma_minor: quote.comision_plataforma_minor,
+      tasa_plataforma_snapshot: quote.tasa_plataforma,
+      cargo_pasarela_minor: quote.cargo_pasarela_minor,
+      tasa_pasarela_snapshot: quote.tasa_pasarela,
+      cargo_fijo_pasarela_snapshot_minor: quote.cargo_fijo_pasarela_minor,
+      impuesto_pasarela_snapshot: quote.impuesto_pasarela,
+      neto_negocio_minor: quote.precio_base_minor,
       payment_provider: 'epayco',
       provider_reference: reference,
       provider_account_id: business.provider_account_id ?? null,
@@ -130,7 +162,7 @@ Deno.serve(async (request) => {
     if (paymentError) throw paymentError
 
     const session = await createEpaycoSession({
-      amountMinor: price.amountMinor,
+      amountMinor: quote.total_minor,
       currency: price.currency,
       reference,
       customerName: input.customerName,
@@ -165,7 +197,10 @@ Deno.serve(async (request) => {
       sessionId: session.sessionId,
       test: Deno.env.get('EPAYCO_ENV') !== 'production',
       courtName: court.nombre ?? 'Cancha',
-      priceMinor: price.amountMinor,
+      priceMinor: quote.precio_base_minor,
+      platformFeeMinor: quote.comision_plataforma_minor,
+      processingFeeMinor: quote.cargo_pasarela_minor,
+      totalMinor: quote.total_minor,
       currency: price.currency,
     }, 200)
   } catch (error) {

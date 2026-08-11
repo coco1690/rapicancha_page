@@ -258,6 +258,78 @@ export type Database = {
           },
         ]
       }
+      categorias_evento: {
+        Row: {
+          activa: boolean
+          configuracion: Json
+          created_at: string
+          edad_maxima: number | null
+          edad_minima: number | null
+          evento_id: string
+          genero: string | null
+          id: string
+          modalidad_evento_id: string | null
+          negocio_id: string
+          nivel: string | null
+          nombre: string
+          orden: number
+          peso_maximo: number | null
+          peso_minimo: number | null
+          updated_at: string
+        }
+        Insert: {
+          activa?: boolean
+          configuracion?: Json
+          created_at?: string
+          edad_maxima?: number | null
+          edad_minima?: number | null
+          evento_id: string
+          genero?: string | null
+          id?: string
+          modalidad_evento_id?: string | null
+          negocio_id: string
+          nivel?: string | null
+          nombre: string
+          orden?: number
+          peso_maximo?: number | null
+          peso_minimo?: number | null
+          updated_at?: string
+        }
+        Update: {
+          activa?: boolean
+          configuracion?: Json
+          created_at?: string
+          edad_maxima?: number | null
+          edad_minima?: number | null
+          evento_id?: string
+          genero?: string | null
+          id?: string
+          modalidad_evento_id?: string | null
+          negocio_id?: string
+          nivel?: string | null
+          nombre?: string
+          orden?: number
+          peso_maximo?: number | null
+          peso_minimo?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categorias_evento_evento_negocio_fk"
+            columns: ["evento_id", "negocio_id"]
+            isOneToOne: false
+            referencedRelation: "eventos"
+            referencedColumns: ["id", "negocio_id"]
+          },
+          {
+            foreignKeyName: "categorias_evento_modalidad_evento_id_fkey"
+            columns: ["modalidad_evento_id"]
+            isOneToOne: false
+            referencedRelation: "modalidades_evento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_whatsapp: {
         Row: {
           creado_en: string
@@ -341,6 +413,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      comisiones_plataforma: {
+        Row: {
+          activa: boolean
+          created_at: string
+          descripcion: string | null
+          id: string
+          porcentaje: number
+          tipo_pago: string
+          updated_at: string
+        }
+        Insert: {
+          activa?: boolean
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          porcentaje?: number
+          tipo_pago: string
+          updated_at?: string
+        }
+        Update: {
+          activa?: boolean
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          porcentaje?: number
+          tipo_pago?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       departamentos: {
         Row: {
@@ -461,6 +563,264 @@ export type Database = {
           },
         ]
       }
+      eventos: {
+        Row: {
+          capacidad_total: number | null
+          ciudad_id: string | null
+          configuracion: Json
+          created_at: string
+          deporte_id: string
+          descripcion: string | null
+          direccion: string | null
+          dorsal_inicial: number
+          es_publico: boolean
+          estado: Database["public"]["Enums"]["evento_estado"]
+          fin_at: string
+          id: string
+          inicio_at: string
+          inscripciones_abren_en: string | null
+          inscripciones_cierran_en: string | null
+          latitud: number | null
+          longitud: number | null
+          moneda_codigo: string
+          negocio_id: string
+          nombre: string
+          portada_url: string | null
+          reglamento_url: string | null
+          requiere_dorsal: boolean
+          slug: string
+          solicita_talla_camiseta: boolean
+          tallas_camiseta: string[]
+          updated_at: string
+          zona_horaria: string
+        }
+        Insert: {
+          capacidad_total?: number | null
+          ciudad_id?: string | null
+          configuracion?: Json
+          created_at?: string
+          deporte_id: string
+          descripcion?: string | null
+          direccion?: string | null
+          dorsal_inicial?: number
+          es_publico?: boolean
+          estado?: Database["public"]["Enums"]["evento_estado"]
+          fin_at: string
+          id?: string
+          inicio_at: string
+          inscripciones_abren_en?: string | null
+          inscripciones_cierran_en?: string | null
+          latitud?: number | null
+          longitud?: number | null
+          moneda_codigo: string
+          negocio_id: string
+          nombre: string
+          portada_url?: string | null
+          reglamento_url?: string | null
+          requiere_dorsal?: boolean
+          slug: string
+          solicita_talla_camiseta?: boolean
+          tallas_camiseta?: string[]
+          updated_at?: string
+          zona_horaria: string
+        }
+        Update: {
+          capacidad_total?: number | null
+          ciudad_id?: string | null
+          configuracion?: Json
+          created_at?: string
+          deporte_id?: string
+          descripcion?: string | null
+          direccion?: string | null
+          dorsal_inicial?: number
+          es_publico?: boolean
+          estado?: Database["public"]["Enums"]["evento_estado"]
+          fin_at?: string
+          id?: string
+          inicio_at?: string
+          inscripciones_abren_en?: string | null
+          inscripciones_cierran_en?: string | null
+          latitud?: number | null
+          longitud?: number | null
+          moneda_codigo?: string
+          negocio_id?: string
+          nombre?: string
+          portada_url?: string | null
+          reglamento_url?: string | null
+          requiere_dorsal?: boolean
+          slug?: string
+          solicita_talla_camiseta?: boolean
+          tallas_camiseta?: string[]
+          updated_at?: string
+          zona_horaria?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_ciudad_id_fkey"
+            columns: ["ciudad_id"]
+            isOneToOne: false
+            referencedRelation: "ciudades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_deporte_id_fkey"
+            columns: ["deporte_id"]
+            isOneToOne: false
+            referencedRelation: "deportes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_deporte_id_fkey"
+            columns: ["deporte_id"]
+            isOneToOne: false
+            referencedRelation: "v_marketplace_canchas"
+            referencedColumns: ["deporte_id"]
+          },
+          {
+            foreignKeyName: "eventos_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios_publicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "v_marketplace_canchas"
+            referencedColumns: ["negocio_id"]
+          },
+        ]
+      }
+      inscripciones_evento: {
+        Row: {
+          cargo_fijo_pasarela_snapshot_minor: number
+          cargo_pasarela_minor: number
+          categoria_evento_id: string | null
+          comprador_usuario_id: string | null
+          created_at: string
+          descuento_minor: number
+          estado: Database["public"]["Enums"]["inscripcion_evento_estado"]
+          evento_id: string
+          expira_en: string | null
+          id: string
+          impuesto_pasarela_snapshot: number
+          modalidad_evento_id: string
+          moneda_codigo: string
+          negocio_id: string
+          numero_dorsal: string | null
+          numero_inscripcion: string
+          participante_id: string
+          peso_declarado: number | null
+          precio_base_minor: number
+          privacidad_aceptada_en: string
+          referencia_publica: string
+          talla_camiseta: string | null
+          tarifa_plataforma_minor: number
+          tasa_pasarela_snapshot: number
+          tasa_plataforma_snapshot: number
+          terminos_aceptados_en: string
+          total_minor: number
+          updated_at: string
+        }
+        Insert: {
+          cargo_fijo_pasarela_snapshot_minor?: number
+          cargo_pasarela_minor?: number
+          categoria_evento_id?: string | null
+          comprador_usuario_id?: string | null
+          created_at?: string
+          descuento_minor?: number
+          estado?: Database["public"]["Enums"]["inscripcion_evento_estado"]
+          evento_id: string
+          expira_en?: string | null
+          id?: string
+          impuesto_pasarela_snapshot?: number
+          modalidad_evento_id: string
+          moneda_codigo: string
+          negocio_id: string
+          numero_dorsal?: string | null
+          numero_inscripcion: string
+          participante_id: string
+          peso_declarado?: number | null
+          precio_base_minor: number
+          privacidad_aceptada_en: string
+          referencia_publica: string
+          talla_camiseta?: string | null
+          tarifa_plataforma_minor?: number
+          tasa_pasarela_snapshot?: number
+          tasa_plataforma_snapshot?: number
+          terminos_aceptados_en: string
+          total_minor: number
+          updated_at?: string
+        }
+        Update: {
+          cargo_fijo_pasarela_snapshot_minor?: number
+          cargo_pasarela_minor?: number
+          categoria_evento_id?: string | null
+          comprador_usuario_id?: string | null
+          created_at?: string
+          descuento_minor?: number
+          estado?: Database["public"]["Enums"]["inscripcion_evento_estado"]
+          evento_id?: string
+          expira_en?: string | null
+          id?: string
+          impuesto_pasarela_snapshot?: number
+          modalidad_evento_id?: string
+          moneda_codigo?: string
+          negocio_id?: string
+          numero_dorsal?: string | null
+          numero_inscripcion?: string
+          participante_id?: string
+          peso_declarado?: number | null
+          precio_base_minor?: number
+          privacidad_aceptada_en?: string
+          referencia_publica?: string
+          talla_camiseta?: string | null
+          tarifa_plataforma_minor?: number
+          tasa_pasarela_snapshot?: number
+          tasa_plataforma_snapshot?: number
+          terminos_aceptados_en?: string
+          total_minor?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inscripciones_evento_categoria_evento_id_fkey"
+            columns: ["categoria_evento_id"]
+            isOneToOne: false
+            referencedRelation: "categorias_evento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inscripciones_evento_evento_negocio_fk"
+            columns: ["evento_id", "negocio_id"]
+            isOneToOne: false
+            referencedRelation: "eventos"
+            referencedColumns: ["id", "negocio_id"]
+          },
+          {
+            foreignKeyName: "inscripciones_evento_modalidad_evento_id_fkey"
+            columns: ["modalidad_evento_id"]
+            isOneToOne: false
+            referencedRelation: "modalidades_evento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inscripciones_evento_participante_id_fkey"
+            columns: ["participante_id"]
+            isOneToOne: false
+            referencedRelation: "participantes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inscripciones_torneo: {
         Row: {
           creado_en: string
@@ -575,6 +935,74 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "jugadores_equipo"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      modalidades_evento: {
+        Row: {
+          activa: boolean
+          capacidad: number | null
+          configuracion: Json
+          created_at: string
+          descripcion: string | null
+          distancia: number | null
+          evento_id: string
+          id: string
+          inicio_at: string | null
+          moneda_codigo: string
+          negocio_id: string
+          nombre: string
+          orden: number
+          precio_base_minor: number
+          slug: string
+          unidad_distancia: string | null
+          updated_at: string
+        }
+        Insert: {
+          activa?: boolean
+          capacidad?: number | null
+          configuracion?: Json
+          created_at?: string
+          descripcion?: string | null
+          distancia?: number | null
+          evento_id: string
+          id?: string
+          inicio_at?: string | null
+          moneda_codigo: string
+          negocio_id: string
+          nombre: string
+          orden?: number
+          precio_base_minor?: number
+          slug: string
+          unidad_distancia?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activa?: boolean
+          capacidad?: number | null
+          configuracion?: Json
+          created_at?: string
+          descripcion?: string | null
+          distancia?: number | null
+          evento_id?: string
+          id?: string
+          inicio_at?: string | null
+          moneda_codigo?: string
+          negocio_id?: string
+          nombre?: string
+          orden?: number
+          precio_base_minor?: number
+          slug?: string
+          unidad_distancia?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modalidades_evento_evento_negocio_fk"
+            columns: ["evento_id", "negocio_id"]
+            isOneToOne: false
+            referencedRelation: "eventos"
+            referencedColumns: ["id", "negocio_id"]
           },
         ]
       }
@@ -804,12 +1232,17 @@ export type Database = {
       pagos: {
         Row: {
           actualizado_en: string
+          cargo_fijo_pasarela_snapshot_minor: number
+          cargo_pasarela_minor: number
           comision_plataforma_minor: number
           creado_en: string
           estado: Database["public"]["Enums"]["payment_status"]
           id: string
+          impuesto_pasarela_snapshot: number
+          inscripcion_evento_id: string | null
           inscripcion_torneo_id: string | null
           moneda: string
+          monto_base_minor: number
           monto_total_minor: number
           negocio_id: string
           neto_negocio_minor: number
@@ -825,16 +1258,23 @@ export type Database = {
           stripe_connect_account_id: string | null
           stripe_payment_intent_id: string | null
           suscripcion_id: string | null
+          tasa_pasarela_snapshot: number
+          tasa_plataforma_snapshot: number
           tipo_pago: Database["public"]["Enums"]["payment_type"]
         }
         Insert: {
           actualizado_en?: string
+          cargo_fijo_pasarela_snapshot_minor?: number
+          cargo_pasarela_minor?: number
           comision_plataforma_minor: number
           creado_en?: string
           estado?: Database["public"]["Enums"]["payment_status"]
           id?: string
+          impuesto_pasarela_snapshot?: number
+          inscripcion_evento_id?: string | null
           inscripcion_torneo_id?: string | null
           moneda: string
+          monto_base_minor?: number
           monto_total_minor: number
           negocio_id: string
           neto_negocio_minor: number
@@ -850,16 +1290,23 @@ export type Database = {
           stripe_connect_account_id?: string | null
           stripe_payment_intent_id?: string | null
           suscripcion_id?: string | null
+          tasa_pasarela_snapshot?: number
+          tasa_plataforma_snapshot?: number
           tipo_pago: Database["public"]["Enums"]["payment_type"]
         }
         Update: {
           actualizado_en?: string
+          cargo_fijo_pasarela_snapshot_minor?: number
+          cargo_pasarela_minor?: number
           comision_plataforma_minor?: number
           creado_en?: string
           estado?: Database["public"]["Enums"]["payment_status"]
           id?: string
+          impuesto_pasarela_snapshot?: number
+          inscripcion_evento_id?: string | null
           inscripcion_torneo_id?: string | null
           moneda?: string
+          monto_base_minor?: number
           monto_total_minor?: number
           negocio_id?: string
           neto_negocio_minor?: number
@@ -875,9 +1322,18 @@ export type Database = {
           stripe_connect_account_id?: string | null
           stripe_payment_intent_id?: string | null
           suscripcion_id?: string | null
+          tasa_pasarela_snapshot?: number
+          tasa_plataforma_snapshot?: number
           tipo_pago?: Database["public"]["Enums"]["payment_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "pagos_inscripcion_evento_id_fkey"
+            columns: ["inscripcion_evento_id"]
+            isOneToOne: false
+            referencedRelation: "inscripciones_evento"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pagos_inscripcion_torneo_id_fkey"
             columns: ["inscripcion_torneo_id"]
@@ -928,10 +1384,10 @@ export type Database = {
           codigo_iso2: string
           created_at: string
           id: string
+          indicativo_pais: string | null
           moneda_codigo: string
           moneda_simbolo: string
           nombre: string
-          indicativo_pais: string | null
           zona_horaria_default: string
         }
         Insert: {
@@ -939,10 +1395,10 @@ export type Database = {
           codigo_iso2: string
           created_at?: string
           id?: string
+          indicativo_pais?: string | null
           moneda_codigo: string
           moneda_simbolo: string
           nombre: string
-          indicativo_pais?: string | null
           zona_horaria_default: string
         }
         Update: {
@@ -950,10 +1406,10 @@ export type Database = {
           codigo_iso2?: string
           created_at?: string
           id?: string
+          indicativo_pais?: string | null
           moneda_codigo?: string
           moneda_simbolo?: string
           nombre?: string
-          indicativo_pais?: string | null
           zona_horaria_default?: string
         }
         Relationships: []
@@ -988,6 +1444,57 @@ export type Database = {
           payment_providers_disponibles?: string[]
           stripe_connect_disponible?: boolean
           timezone_default?: string
+        }
+        Relationships: []
+      }
+      participantes: {
+        Row: {
+          apellidos: string
+          contacto_emergencia_nombre: string
+          contacto_emergencia_telefono_e164: string
+          created_at: string
+          email: string
+          fecha_nacimiento: string
+          genero: string | null
+          id: string
+          nombres: string
+          numero_documento: string
+          telefono_e164: string
+          tipo_documento: string
+          updated_at: string
+          usuario_propietario_id: string | null
+        }
+        Insert: {
+          apellidos: string
+          contacto_emergencia_nombre: string
+          contacto_emergencia_telefono_e164: string
+          created_at?: string
+          email: string
+          fecha_nacimiento: string
+          genero?: string | null
+          id?: string
+          nombres: string
+          numero_documento: string
+          telefono_e164: string
+          tipo_documento: string
+          updated_at?: string
+          usuario_propietario_id?: string | null
+        }
+        Update: {
+          apellidos?: string
+          contacto_emergencia_nombre?: string
+          contacto_emergencia_telefono_e164?: string
+          created_at?: string
+          email?: string
+          fecha_nacimiento?: string
+          genero?: string | null
+          id?: string
+          nombres?: string
+          numero_documento?: string
+          telefono_e164?: string
+          tipo_documento?: string
+          updated_at?: string
+          usuario_propietario_id?: string | null
         }
         Relationships: []
       }
@@ -1094,8 +1601,10 @@ export type Database = {
           creado_en: string
           created_at: string | null
           descripcion: string | null
+          eventos_habilitados: boolean
           id: string
           limite_canchas: number
+          limite_eventos: number | null
           moneda: string
           moneda_codigo: string | null
           nombre: string
@@ -1111,8 +1620,10 @@ export type Database = {
           creado_en?: string
           created_at?: string | null
           descripcion?: string | null
+          eventos_habilitados?: boolean
           id?: string
           limite_canchas: number
+          limite_eventos?: number | null
           moneda?: string
           moneda_codigo?: string | null
           nombre: string
@@ -1128,8 +1639,10 @@ export type Database = {
           creado_en?: string
           created_at?: string | null
           descripcion?: string | null
+          eventos_habilitados?: boolean
           id?: string
           limite_canchas?: number
+          limite_eventos?: number | null
           moneda?: string
           moneda_codigo?: string | null
           nombre?: string
@@ -1164,6 +1677,9 @@ export type Database = {
           acepta_terminos: boolean
           actualizado_en: string
           cancha_id: string
+          cargo_fijo_pasarela_snapshot_minor: number
+          cargo_pasarela_minor: number
+          comision_plataforma_minor: number
           creado_en: string
           email_cliente: string | null
           estado_reserva: Database["public"]["Enums"]["booking_status"]
@@ -1172,6 +1688,7 @@ export type Database = {
           hora_fin_local: string
           hora_inicio_local: string
           id: string
+          impuesto_pasarela_snapshot: number
           inicio_at: string
           jugadores_faltantes: number
           moneda: string
@@ -1179,9 +1696,12 @@ export type Database = {
           nombre_cliente: string
           origen: Database["public"]["Enums"]["booking_origin"]
           partido_abierto: boolean
+          precio_base_minor: number
           precio_total_minor: number
           referencia_publica: string
           seguro_cancelacion_activo: boolean
+          tasa_pasarela_snapshot: number
+          tasa_plataforma_snapshot: number
           telefono_cliente: string
           telefono_cliente_e164: string | null
           terminos_aceptados_en: string | null
@@ -1195,6 +1715,9 @@ export type Database = {
           acepta_terminos?: boolean
           actualizado_en?: string
           cancha_id: string
+          cargo_fijo_pasarela_snapshot_minor?: number
+          cargo_pasarela_minor?: number
+          comision_plataforma_minor?: number
           creado_en?: string
           email_cliente?: string | null
           estado_reserva?: Database["public"]["Enums"]["booking_status"]
@@ -1203,6 +1726,7 @@ export type Database = {
           hora_fin_local: string
           hora_inicio_local: string
           id?: string
+          impuesto_pasarela_snapshot?: number
           inicio_at: string
           jugadores_faltantes?: number
           moneda: string
@@ -1210,9 +1734,12 @@ export type Database = {
           nombre_cliente: string
           origen?: Database["public"]["Enums"]["booking_origin"]
           partido_abierto?: boolean
+          precio_base_minor?: number
           precio_total_minor: number
           referencia_publica?: string
           seguro_cancelacion_activo?: boolean
+          tasa_pasarela_snapshot?: number
+          tasa_plataforma_snapshot?: number
           telefono_cliente: string
           telefono_cliente_e164?: string | null
           terminos_aceptados_en?: string | null
@@ -1226,6 +1753,9 @@ export type Database = {
           acepta_terminos?: boolean
           actualizado_en?: string
           cancha_id?: string
+          cargo_fijo_pasarela_snapshot_minor?: number
+          cargo_pasarela_minor?: number
+          comision_plataforma_minor?: number
           creado_en?: string
           email_cliente?: string | null
           estado_reserva?: Database["public"]["Enums"]["booking_status"]
@@ -1234,6 +1764,7 @@ export type Database = {
           hora_fin_local?: string
           hora_inicio_local?: string
           id?: string
+          impuesto_pasarela_snapshot?: number
           inicio_at?: string
           jugadores_faltantes?: number
           moneda?: string
@@ -1241,9 +1772,12 @@ export type Database = {
           nombre_cliente?: string
           origen?: Database["public"]["Enums"]["booking_origin"]
           partido_abierto?: boolean
+          precio_base_minor?: number
           precio_total_minor?: number
           referencia_publica?: string
           seguro_cancelacion_activo?: boolean
+          tasa_pasarela_snapshot?: number
+          tasa_plataforma_snapshot?: number
           telefono_cliente?: string
           telefono_cliente_e164?: string | null
           terminos_aceptados_en?: string | null
@@ -1433,42 +1967,69 @@ export type Database = {
       suscripciones: {
         Row: {
           actualizado_en: string
+          cargo_fijo_pasarela_snapshot_minor: number
+          cargo_pasarela_minor: number
+          comision_plataforma_minor: number
           creado_en: string
           estado: Database["public"]["Enums"]["subscription_status"]
           id: string
+          impuesto_pasarela_snapshot: number
+          moneda_codigo: string | null
           negocio_id: string
           payment_provider: string
           periodo_fin: string
           periodo_inicio: string
           plan_id: string
+          precio_base_minor: number
           provider_subscription_id: string | null
           stripe_subscription_id: string
+          tasa_pasarela_snapshot: number
+          tasa_plataforma_snapshot: number
+          total_minor: number
         }
         Insert: {
           actualizado_en?: string
+          cargo_fijo_pasarela_snapshot_minor?: number
+          cargo_pasarela_minor?: number
+          comision_plataforma_minor?: number
           creado_en?: string
           estado: Database["public"]["Enums"]["subscription_status"]
           id?: string
+          impuesto_pasarela_snapshot?: number
+          moneda_codigo?: string | null
           negocio_id: string
           payment_provider?: string
           periodo_fin: string
           periodo_inicio: string
           plan_id: string
+          precio_base_minor?: number
           provider_subscription_id?: string | null
           stripe_subscription_id: string
+          tasa_pasarela_snapshot?: number
+          tasa_plataforma_snapshot?: number
+          total_minor?: number
         }
         Update: {
           actualizado_en?: string
+          cargo_fijo_pasarela_snapshot_minor?: number
+          cargo_pasarela_minor?: number
+          comision_plataforma_minor?: number
           creado_en?: string
           estado?: Database["public"]["Enums"]["subscription_status"]
           id?: string
+          impuesto_pasarela_snapshot?: number
+          moneda_codigo?: string | null
           negocio_id?: string
           payment_provider?: string
           periodo_fin?: string
           periodo_inicio?: string
           plan_id?: string
+          precio_base_minor?: number
           provider_subscription_id?: string | null
           stripe_subscription_id?: string
+          tasa_pasarela_snapshot?: number
+          tasa_plataforma_snapshot?: number
+          total_minor?: number
         }
         Relationships: [
           {
@@ -1628,6 +2189,54 @@ export type Database = {
             referencedColumns: ["cancha_id"]
           },
         ]
+      }
+      tarifas_pasarela: {
+        Row: {
+          activa: boolean
+          cargo_fijo_minor: number
+          created_at: string
+          descripcion: string | null
+          id: string
+          impuesto_porcentaje: number
+          moneda_codigo: string
+          porcentaje: number
+          proveedor: string
+          tipo_pago: string | null
+          updated_at: string
+          vigente_desde: string
+          vigente_hasta: string | null
+        }
+        Insert: {
+          activa?: boolean
+          cargo_fijo_minor?: number
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          impuesto_porcentaje?: number
+          moneda_codigo: string
+          porcentaje?: number
+          proveedor: string
+          tipo_pago?: string | null
+          updated_at?: string
+          vigente_desde?: string
+          vigente_hasta?: string | null
+        }
+        Update: {
+          activa?: boolean
+          cargo_fijo_minor?: number
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          impuesto_porcentaje?: number
+          moneda_codigo?: string
+          porcentaje?: number
+          proveedor?: string
+          tipo_pago?: string | null
+          updated_at?: string
+          vigente_desde?: string
+          vigente_hasta?: string | null
+        }
+        Relationships: []
       }
       torneos: {
         Row: {
@@ -1845,6 +2454,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "whatsapp_notificaciones_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios_publicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_notificaciones_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "v_marketplace_canchas"
+            referencedColumns: ["negocio_id"]
+          },
+          {
             foreignKeyName: "whatsapp_notificaciones_reserva_id_fkey"
             columns: ["reserva_id"]
             isOneToOne: false
@@ -2051,7 +2674,97 @@ export type Database = {
     Functions: {
       claim_whatsapp_notificaciones: {
         Args: { p_limit?: number }
-        Returns: Database["public"]["Tables"]["whatsapp_notificaciones"]["Row"][]
+        Returns: {
+          actualizado_en: string
+          creado_en: string
+          destinatario: string
+          entregado_en: string | null
+          enviado_en: string | null
+          error_codigo: string | null
+          error_detalle: string | null
+          estado: string
+          evento: string
+          id: string
+          intentos: number
+          leido_en: string | null
+          negocio_id: string
+          proximo_intento_en: string
+          reserva_id: string
+          twilio_message_sid: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "whatsapp_notificaciones"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      cotizar_compra: {
+        Args: {
+          p_moneda_codigo: string
+          p_precio_base_minor: number
+          p_proveedor: string
+          p_tipo_pago: string
+        }
+        Returns: {
+          cargo_fijo_pasarela_minor: number
+          cargo_pasarela_minor: number
+          comision_plataforma_minor: number
+          impuesto_pasarela: number
+          precio_base_minor: number
+          subtotal_minor: number
+          tasa_pasarela: number
+          tasa_plataforma: number
+          total_minor: number
+        }[]
+      }
+      cotizar_pago: {
+        Args: {
+          p_comision_plataforma_minor?: number
+          p_moneda_codigo: string
+          p_precio_base_minor: number
+          p_proveedor: string
+          p_tipo_pago: string
+        }
+        Returns: {
+          cargo_fijo_pasarela_minor: number
+          cargo_pasarela_minor: number
+          comision_plataforma_minor: number
+          impuesto_pasarela: number
+          precio_base_minor: number
+          subtotal_minor: number
+          tasa_pasarela: number
+          total_minor: number
+        }[]
+      }
+      crear_inscripcion_evento_publica: {
+        Args: {
+          p_acepta_privacidad: boolean
+          p_acepta_terminos: boolean
+          p_apellidos: string
+          p_categoria_evento_id: string
+          p_contacto_emergencia_nombre: string
+          p_contacto_emergencia_telefono_e164: string
+          p_email: string
+          p_fecha_nacimiento: string
+          p_genero: string
+          p_modalidad_evento_id: string
+          p_nombres: string
+          p_numero_documento: string
+          p_peso_declarado: number
+          p_talla_camiseta: string
+          p_telefono_e164: string
+          p_tipo_documento: string
+        }
+        Returns: {
+          expira_en: string
+          moneda_codigo: string
+          numero_inscripcion: string
+          precio_base_minor: number
+          referencia_publica: string
+          tarifa_plataforma_minor: number
+          total_minor: number
+        }[]
       }
       is_admin: { Args: never; Returns: boolean }
       owns_negocio: { Args: { target_negocio_id: string }; Returns: boolean }
@@ -2065,6 +2778,20 @@ export type Database = {
         | "expirada"
         | "reembolsada"
       cancha_estado: "activa" | "mantenimiento" | "inactiva"
+      evento_estado:
+        | "borrador"
+        | "publicado"
+        | "en_curso"
+        | "finalizado"
+        | "cancelado"
+      inscripcion_evento_estado:
+        | "pendiente_pago"
+        | "pagada"
+        | "confirmada"
+        | "cancelada"
+        | "reembolsada"
+        | "acreditada"
+        | "completada"
       match_status:
         | "programado"
         | "en_juego"
@@ -2073,7 +2800,7 @@ export type Database = {
         | "cancelado"
       negocio_estado: "borrador" | "activo" | "suspendido" | "cancelado"
       payment_status: "pending" | "paid" | "failed" | "refunded"
-      payment_type: "reserva" | "torneo" | "suscripcion"
+      payment_type: "reserva" | "torneo" | "suscripcion" | "evento"
       precio_tipo: "hora" | "franja"
       subscription_status:
         | "active"
@@ -2223,6 +2950,22 @@ export const Constants = {
         "reembolsada",
       ],
       cancha_estado: ["activa", "mantenimiento", "inactiva"],
+      evento_estado: [
+        "borrador",
+        "publicado",
+        "en_curso",
+        "finalizado",
+        "cancelado",
+      ],
+      inscripcion_evento_estado: [
+        "pendiente_pago",
+        "pagada",
+        "confirmada",
+        "cancelada",
+        "reembolsada",
+        "acreditada",
+        "completada",
+      ],
       match_status: [
         "programado",
         "en_juego",
@@ -2232,7 +2975,7 @@ export const Constants = {
       ],
       negocio_estado: ["borrador", "activo", "suspendido", "cancelado"],
       payment_status: ["pending", "paid", "failed", "refunded"],
-      payment_type: ["reserva", "torneo", "suscripcion"],
+      payment_type: ["reserva", "torneo", "suscripcion", "evento"],
       precio_tipo: ["hora", "franja"],
       subscription_status: [
         "active",

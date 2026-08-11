@@ -14,3 +14,15 @@ enabled = true
 
 [functions.public-availability]
 verify_jwt = false
+
+[functions.send-whatsapp-notifications]
+verify_jwt = false
+
+[functions.twilio-message-status]
+verify_jwt = false
+
+[functions.create-event-checkout]
+verify_jwt = false
+
+[functions.event-payment-status]
+verify_jwt = false

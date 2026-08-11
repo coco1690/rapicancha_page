@@ -11,13 +11,14 @@ export type EventParticipantForm = {
   categoryId: string; firstName: string; lastName: string; documentType: string; documentNumber: string
   birthDate: string; gender: string; email: string; phoneCountryCode: string; phone: string
   emergencyName: string; emergencyPhoneCountryCode: string; emergencyPhone: string; shirtSize: string; declaredWeight: string
+  acceptsEmailMarketing: boolean; acceptsWhatsAppMarketing: boolean
 }
 export type EventRegistrationForm = EventParticipantForm & {
   modalityId: string; quantity: number; additionalParticipants: EventParticipantForm[]
   acceptsTerms: boolean; acceptsPrivacy: boolean
 }
 
-const emptyParticipant = (): EventParticipantForm => ({ categoryId: '', firstName: '', lastName: '', documentType: 'CC', documentNumber: '', birthDate: '', gender: '', email: '', phoneCountryCode: 'CO', phone: '', emergencyName: '', emergencyPhoneCountryCode: 'CO', emergencyPhone: '', shirtSize: '', declaredWeight: '' })
+const emptyParticipant = (): EventParticipantForm => ({ categoryId: '', firstName: '', lastName: '', documentType: 'CC', documentNumber: '', birthDate: '', gender: '', email: '', phoneCountryCode: 'CO', phone: '', emergencyName: '', emergencyPhoneCountryCode: 'CO', emergencyPhone: '', shirtSize: '', declaredWeight: '', acceptsEmailMarketing: false, acceptsWhatsAppMarketing: false })
 const emptyForm = (): EventRegistrationForm => ({ ...emptyParticipant(), modalityId: '', quantity: 1, additionalParticipants: [], acceptsTerms: false, acceptsPrivacy: false })
 const failure = (error: unknown) => (error as { message?: string })?.message ?? 'No se pudo completar la inscripción.'
 
@@ -44,7 +45,7 @@ function participantPayload(participant: EventParticipantForm, countries: Pais[]
   const emergencyPhone = toE164(participant.emergencyPhoneCountryCode, participant.emergencyPhone, countries)
   if (!participant.firstName.trim() || !participant.lastName.trim() || !participant.documentNumber.trim() || !participant.birthDate || !participant.email.trim() || !participant.emergencyName.trim()) throw new Error('Completa todos los campos obligatorios de cada participante.')
   if (!phone || !emergencyPhone) throw new Error('Verifica los teléfonos y sus indicativos de país.')
-  return { categoria_id: participant.categoryId, nombres: participant.firstName.trim(), apellidos: participant.lastName.trim(), tipo_documento: participant.documentType, numero_documento: participant.documentNumber.trim(), fecha_nacimiento: participant.birthDate, genero: participant.gender, email: participant.email.trim(), telefono_e164: phone, contacto_emergencia_nombre: participant.emergencyName.trim(), contacto_emergencia_telefono_e164: emergencyPhone, talla_camiseta: participant.shirtSize, peso_declarado: participant.declaredWeight ? Number(participant.declaredWeight) : 0 }
+  return { categoria_id: participant.categoryId, nombres: participant.firstName.trim(), apellidos: participant.lastName.trim(), tipo_documento: participant.documentType, numero_documento: participant.documentNumber.trim(), fecha_nacimiento: participant.birthDate, genero: participant.gender, email: participant.email.trim(), telefono_e164: phone, contacto_emergencia_nombre: participant.emergencyName.trim(), contacto_emergencia_telefono_e164: emergencyPhone, talla_camiseta: participant.shirtSize, peso_declarado: participant.declaredWeight ? Number(participant.declaredWeight) : 0, acepta_marketing_email: participant.acceptsEmailMarketing, acepta_marketing_whatsapp: participant.acceptsWhatsAppMarketing }
 }
 
 export const usePublicEventStore = create<State>((set, get) => ({

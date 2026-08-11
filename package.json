@@ -41,6 +41,7 @@
     "db:push:event-bibs-shirts": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260811142000_event_bibs_and_shirts.sql",
     "db:push:pad-event-bibs": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260811143000_pad_event_bib_numbers.sql",
     "db:push:group-event-orders": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260811144000_group_event_orders.sql",
+    "db:push:participant-realtime-crm": "node scripts/apply-supabase-migration.mjs supabase/migrations/20260811145000_participant_realtime_crm_notifications.sql",
     "db:types": "node scripts/generate-supabase-types.mjs",
     "db:check:phase1": "node scripts/check-supabase-phase1.mjs",
     "supabase:login": "supabase login",

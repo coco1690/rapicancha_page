@@ -38,6 +38,7 @@ const AdminSupportPage = lazy(() => import('../features/admin/pages/AdminSupport
 const EventsPage = lazy(() => import('../features/events/pages/EventsPage').then((module) => ({ default: module.EventsPage })))
 const PublicEventPage = lazy(() => import('../features/events/pages/PublicEventPage').then((module) => ({ default: module.PublicEventPage })))
 const EventPaymentResultPage = lazy(() => import('../features/events/pages/EventPaymentResultPage').then((module) => ({ default: module.EventPaymentResultPage })))
+const ParticipantsPage = lazy(() => import('../features/participants/pages/ParticipantsPage').then((module) => ({ default: module.ParticipantsPage })))
 
 export function AppRouter() {
   return (
@@ -72,6 +73,7 @@ export function AppRouter() {
             <Route path="canchas" element={<CourtsPage />} />
             <Route path="reservas" element={<ReservationsPage />} />
             <Route path="eventos" element={<EventsPage scope="business" />} />
+            <Route path="participantes" element={<ParticipantsPage scope="business" />} />
           </Route>
         </Route>
         <Route element={<RoleRoute allowed={['admin']} />}>
@@ -84,6 +86,7 @@ export function AppRouter() {
             <Route path="deportes" element={<AdminSportsPage />} />
             <Route path="competiciones" element={<AdminCompetitionsPage />} />
             <Route path="eventos" element={<EventsPage scope="admin" />} />
+            <Route path="participantes" element={<ParticipantsPage scope="admin" />} />
             <Route path="operaciones" element={<AdminOperationsPage />} />
             <Route path="comisiones" element={<AdminPaymentSettingsPage />} />
             <Route path="soporte" element={<AdminSupportPage />} />

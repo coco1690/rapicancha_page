@@ -99,7 +99,7 @@ export const eventRepository = {
     return quote
   },
   createPublicRegistration: async (input: DatabaseRegistrationInput): Promise<EventRegistrationReceipt> => {
-    const result = await client().rpc('crear_orden_evento_publica', input)
+    const result = await client().rpc('crear_orden_evento_publica_con_preferencias', input)
     ensure(result.error)
     const registration = result.data?.[0]
     if (!registration) throw new Error('No se pudo generar la inscripcion.')
@@ -212,6 +212,8 @@ export type DatabaseRegistrationInput = {
     contacto_emergencia_telefono_e164: string
     talla_camiseta: string
     peso_declarado: number
+    acepta_marketing_email: boolean
+    acepta_marketing_whatsapp: boolean
   }>
   p_comprador_nombre: string
   p_comprador_email: string

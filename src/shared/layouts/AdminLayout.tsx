@@ -1,4 +1,4 @@
-import { AccountTreeOutlined, BusinessOutlined, CreditCardOutlined, DashboardOutlined, EventAvailableOutlined, HeadsetMicOutlined, LocationOnOutlined, PeopleOutlined, SportsSoccerOutlined, EmojiEventsOutlined, PercentOutlined } from '@mui/icons-material'
+import { AccountTreeOutlined, BusinessOutlined, CreditCardOutlined, DashboardOutlined, EventAvailableOutlined, GroupsOutlined, HeadsetMicOutlined, LocationOnOutlined, PeopleOutlined, SportsSoccerOutlined, EmojiEventsOutlined, PercentOutlined } from '@mui/icons-material'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/useAuthStore'
 import { DashboardShell, type DashboardNavItem } from './DashboardShell'
@@ -14,6 +14,7 @@ const navigation: DashboardNavItem[] = [
   { to: '/admin/deportes', label: 'Deportes', icon: <SportsSoccerOutlined />, group: 'Gestion' },
   { to: '/admin/competiciones', label: 'Competiciones', icon: <EmojiEventsOutlined />, group: 'Gestion' },
   { to: '/admin/eventos', label: 'Eventos', icon: <EventAvailableOutlined />, group: 'Gestion' },
+  { to: '/admin/participantes', label: 'Participantes', icon: <GroupsOutlined />, group: 'Gestion' },
   { to: '/admin/soporte', label: 'Soporte', icon: <HeadsetMicOutlined />, group: 'Gestion' },
 ]
 

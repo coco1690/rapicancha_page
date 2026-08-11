@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { CalendarMonthOutlined, DashboardOutlined, EventAvailableOutlined, SettingsOutlined, SportsSoccerOutlined } from '@mui/icons-material'
+import { CalendarMonthOutlined, DashboardOutlined, EventAvailableOutlined, GroupsOutlined, SettingsOutlined, SportsSoccerOutlined } from '@mui/icons-material'
 import { Alert, Button } from '@mui/material'
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../stores/useAuthStore'
@@ -12,6 +12,7 @@ const navigation: DashboardNavItem[] = [
   { to: '/negocio/reservas', label: 'Reservas', icon: <CalendarMonthOutlined />, group: 'Principal' },
   { to: '/negocio/canchas', label: 'Canchas', icon: <SportsSoccerOutlined />, group: 'Gestion' },
   { to: '/negocio/eventos', label: 'Eventos', icon: <EventAvailableOutlined />, group: 'Gestion' },
+  { to: '/negocio/participantes', label: 'Participantes', icon: <GroupsOutlined />, group: 'Gestion' },
   { to: '/negocio/perfil', label: 'Mi negocio', icon: <SettingsOutlined />, group: 'Gestion' },
 ]
 
@@ -52,6 +53,8 @@ export function BusinessLayout() {
   if (loading) return <LoadingScreen label="Cargando panel..." />
 
   const latestNotification = notifications.find((item) => !item.leida)
-  const banner = error ? <Alert severity="error" square>{error}</Alert> : latestNotification ? <Alert severity="info" sx={{ borderRadius: 0 }} action={<Button component={Link} color="inherit" onClick={() => void markNotificationRead(latestNotification.id)} size="small" to="/negocio/reservas">Ver reservas</Button>}><strong>{latestNotification.titulo}:</strong> {latestNotification.mensaje}</Alert> : null
+  const notificationTarget = latestNotification?.tipo === 'participante_inscrito' ? '/negocio/participantes' : '/negocio/reservas'
+  const notificationAction = latestNotification?.tipo === 'participante_inscrito' ? 'Ver participantes' : 'Ver reservas'
+  const banner = error ? <Alert severity="error" square>{error}</Alert> : latestNotification ? <Alert severity="info" sx={{ borderRadius: 0 }} action={<Button component={Link} color="inherit" onClick={() => void markNotificationRead(latestNotification.id)} size="small" to={notificationTarget}>{notificationAction}</Button>}><strong>{latestNotification.titulo}:</strong> {latestNotification.mensaje}</Alert> : null
   return <DashboardShell areaLabel="Negocio" navigation={navigation} profileName={profile?.nombre || user?.email || 'Usuario'} profileSubtitle={business?.nombre || 'Configuracion pendiente'} status={business?.estado || 'Sin negocio'} notificationCount={unreadNotifications} onSignOut={handleSignOut} alert={banner}><Outlet /></DashboardShell>
 }

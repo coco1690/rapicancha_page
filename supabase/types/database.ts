@@ -1179,9 +1179,11 @@ export type Database = {
           creado_en: string
           datos: Json
           id: string
+          inscripcion_evento_id: string | null
           leida: boolean
           mensaje: string
           negocio_id: string
+          orden_evento_id: string | null
           reserva_id: string | null
           tipo: string
           titulo: string
@@ -1190,9 +1192,11 @@ export type Database = {
           creado_en?: string
           datos?: Json
           id?: string
+          inscripcion_evento_id?: string | null
           leida?: boolean
           mensaje: string
           negocio_id: string
+          orden_evento_id?: string | null
           reserva_id?: string | null
           tipo: string
           titulo: string
@@ -1201,14 +1205,23 @@ export type Database = {
           creado_en?: string
           datos?: Json
           id?: string
+          inscripcion_evento_id?: string | null
           leida?: boolean
           mensaje?: string
           negocio_id?: string
+          orden_evento_id?: string | null
           reserva_id?: string | null
           tipo?: string
           titulo?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "notificaciones_negocio_inscripcion_evento_id_fkey"
+            columns: ["inscripcion_evento_id"]
+            isOneToOne: false
+            referencedRelation: "inscripciones_evento"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "notificaciones_negocio_negocio_id_fkey"
             columns: ["negocio_id"]
@@ -1229,6 +1242,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_marketplace_canchas"
             referencedColumns: ["negocio_id"]
+          },
+          {
+            foreignKeyName: "notificaciones_negocio_orden_evento_id_fkey"
+            columns: ["orden_evento_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_evento"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "notificaciones_negocio_reserva_id_fkey"
@@ -1778,6 +1798,71 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      preferencias_contacto_participante: {
+        Row: {
+          acepta_marketing_email: boolean
+          acepta_marketing_whatsapp: boolean
+          created_at: string
+          id: string
+          marketing_email_aceptado_en: string | null
+          marketing_whatsapp_aceptado_en: string | null
+          negocio_id: string
+          participante_id: string
+          updated_at: string
+        }
+        Insert: {
+          acepta_marketing_email?: boolean
+          acepta_marketing_whatsapp?: boolean
+          created_at?: string
+          id?: string
+          marketing_email_aceptado_en?: string | null
+          marketing_whatsapp_aceptado_en?: string | null
+          negocio_id: string
+          participante_id: string
+          updated_at?: string
+        }
+        Update: {
+          acepta_marketing_email?: boolean
+          acepta_marketing_whatsapp?: boolean
+          created_at?: string
+          id?: string
+          marketing_email_aceptado_en?: string | null
+          marketing_whatsapp_aceptado_en?: string | null
+          negocio_id?: string
+          participante_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preferencias_contacto_participante_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preferencias_contacto_participante_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios_publicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "preferencias_contacto_participante_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "v_marketplace_canchas"
+            referencedColumns: ["negocio_id"]
+          },
+          {
+            foreignKeyName: "preferencias_contacto_participante_participante_id_fkey"
+            columns: ["participante_id"]
+            isOneToOne: false
+            referencedRelation: "participantes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rapicancha_migrations: {
         Row: {
@@ -2891,6 +2976,28 @@ export type Database = {
         }[]
       }
       crear_orden_evento_publica: {
+        Args: {
+          p_acepta_privacidad: boolean
+          p_acepta_terminos: boolean
+          p_comprador_email: string
+          p_comprador_nombre: string
+          p_comprador_telefono_e164: string
+          p_modalidad_evento_id: string
+          p_participantes: Json
+        }
+        Returns: {
+          cantidad: number
+          cargo_pasarela_minor: number
+          expira_en: string
+          inscripciones: Json
+          moneda_codigo: string
+          monto_base_minor: number
+          referencia_publica: string
+          tarifa_plataforma_minor: number
+          total_minor: number
+        }[]
+      }
+      crear_orden_evento_publica_con_preferencias: {
         Args: {
           p_acepta_privacidad: boolean
           p_acepta_terminos: boolean

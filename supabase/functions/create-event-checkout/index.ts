@@ -84,7 +84,8 @@ Deno.serve(async (request) => {
     if (updateError) throw updateError
     return json(checkoutResponse(updatedPayment, registration, event, business, modality?.nombre), 200)
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : 'No se pudo iniciar el pago del evento.' }, 500)
+    console.error('create-event-checkout failed', error)
+    return json({ error: readableError(error, 'No se pudo iniciar el pago del evento.') }, 500)
   }
 })
 
@@ -170,16 +171,21 @@ async function createEpaycoSession(input: { amountMinor: number; currency: strin
   const login = await fetch('https://apify.epayco.co/login', { method: 'POST', headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' } })
   const loginBody = await login.json().catch(() => null)
   if (!login.ok || !loginBody?.token) throw new Error('ePayco no entrego token de autenticacion.')
+  const phone = epaycoPhone(input.customerPhone)
   const session = await fetch('https://apify.epayco.co/payment/session/create', {
     method: 'POST', headers: { Authorization: `Bearer ${loginBody.token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ checkout_version: '2', name: input.businessName, currency: input.currency, amount: amountForProvider(input.amountMinor, input.currency), taxBase: 0, tax: 0, taxIco: 0, description: input.description, lang: 'ES', country: 'CO', test: Deno.env.get('EPAYCO_ENV') !== 'production', ip: input.ip, invoice: input.providerInvoice, response: input.responseUrl, forceResponse: true, confirmation: input.confirmationUrl, method: 'GET', extras: { extra1: input.reference, extra2: 'rapicancha', extra3: 'evento' }, billing: { email: input.customerEmail, name: input.customerName, address: 'No reportada', typeDoc: input.customerDocumentType, numberDoc: input.customerDocument, mobilePhone: input.customerPhone } }),
+    body: JSON.stringify({ checkout_version: '2', name: input.businessName, currency: input.currency, amount: amountForProvider(input.amountMinor, input.currency), taxBase: 0, tax: 0, taxIco: 0, description: input.description, lang: 'ES', country: 'CO', test: Deno.env.get('EPAYCO_ENV') !== 'production', ip: input.ip, invoice: input.providerInvoice, ...(isPublicUrl(input.responseUrl) ? { response: input.responseUrl, forceResponse: true } : {}), confirmation: input.confirmationUrl, method: 'GET', extras: { extra1: input.reference, extra2: 'rapicancha', extra3: 'evento' }, billing: { email: input.customerEmail, name: input.customerName, address: 'No reportada', typeDoc: input.customerDocumentType, numberDoc: input.customerDocument, callingCode: phone.callingCode, mobilePhone: phone.mobilePhone } }),
   })
   const sessionBody = await session.json().catch(() => null)
-  if (!session.ok || !sessionBody?.data?.sessionId) throw new Error(sessionBody?.textResponse ?? 'ePayco no pudo crear la sesion.')
+  if (!session.ok || !sessionBody?.data?.sessionId) throw new Error(epaycoErrorMessage(sessionBody))
   return { sessionId: sessionBody.data.sessionId as string }
 }
 
 function amountForProvider(value: number, currency: string) { return ['COP', 'CLP', 'PYG'].includes(currency) ? value : value / 100 }
+function epaycoPhone(value: string) { const digits = value.replace(/\D/g, ''); return digits.startsWith('57') && digits.length > 10 ? { callingCode: '+57', mobilePhone: digits.slice(2) } : { callingCode: '+57', mobilePhone: digits } }
+function epaycoErrorMessage(body: unknown) { if (!body || typeof body !== 'object') return 'ePayco no pudo crear la sesion.'; const payload = body as { textResponse?: string; data?: { errors?: Array<{ errorMessage?: string }> } }; const details = payload.data?.errors?.map((item) => item.errorMessage).filter(Boolean).join(' | '); return details ? `${payload.textResponse ?? 'Error ePayco'}: ${details}` : payload.textResponse ?? 'ePayco no pudo crear la sesion.' }
+function isPublicUrl(value: string) { return /^https:\/\/.+/i.test(value) && !value.includes('127.0.0.1') && !value.includes('localhost') }
 function appPublicUrl() { return Deno.env.get('APP_PUBLIC_URL') ?? 'http://127.0.0.1:5173' }
 function requiredEnv(name: string) { const value = Deno.env.get(name); if (!value) throw new Error(`${name} no esta configurado.`); return value }
+function readableError(error: unknown, fallback: string) { if (error instanceof Error && error.message) return error.message; if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') return error.message; return fallback }
 function json(body: unknown, status: number) { return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }) }

@@ -204,6 +204,7 @@ Deno.serve(async (request) => {
       currency: price.currency,
     }, 200)
   } catch (error) {
+    console.error('create-booking-checkout failed', error)
     if (reservationId) {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')
       const secretKey = Deno.env.get('SUPABASE_SECRET_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
@@ -212,7 +213,7 @@ Deno.serve(async (request) => {
         await adminClient.from('reservas').update({ estado_reserva: 'expirada' }).eq('id', reservationId)
       }
     }
-    return json({ error: error instanceof Error ? error.message : 'No se pudo crear el checkout.' }, 500)
+    return json({ error: readableError(error, 'No se pudo crear el checkout.') }, 500)
   }
 })
 
@@ -384,6 +385,12 @@ function requiredEnv(name: string) {
   const value = Deno.env.get(name)
   if (!value) throw new Error(`${name} no esta configurado.`)
   return value
+}
+
+function readableError(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') return error.message
+  return fallback
 }
 
 function json(body: unknown, status: number) {

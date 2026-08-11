@@ -13,12 +13,13 @@ Deno.serve(async (request) => {
   try {
     const body = await request.json().catch(() => null) as Body | null
     const reference = body?.reference?.trim().toUpperCase() ?? ''
-    if (!/^EVT-[A-Z0-9]{20}$/.test(reference)) return json({ error: 'Referencia de inscripcion invalida.' }, 400)
+    if (!/^(EVT|EVO)-[A-Z0-9]{20}$/.test(reference)) return json({ error: 'Referencia de inscripcion invalida.' }, 400)
 
     const supabaseUrl = requiredEnv('SUPABASE_URL')
     const secretKey = Deno.env.get('SUPABASE_SECRET_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!secretKey) throw new Error('Supabase service role no esta configurado.')
     const db = createClient(supabaseUrl, secretKey, { auth: { autoRefreshToken: false, persistSession: false } })
+    if (reference.startsWith('EVO-')) return await createOrderCheckout(request, db, supabaseUrl, reference)
 
     const { data: registration, error } = await db.from('inscripciones_evento').select('*').eq('referencia_publica', reference).maybeSingle()
     if (error) throw error
@@ -86,6 +87,75 @@ Deno.serve(async (request) => {
     return json({ error: error instanceof Error ? error.message : 'No se pudo iniciar el pago del evento.' }, 500)
   }
 })
+
+async function createOrderCheckout(request: Request, db: ReturnType<typeof createClient>, supabaseUrl: string, reference: string) {
+  const { data: order, error } = await db.from('ordenes_evento').select('*').eq('referencia_publica', reference).maybeSingle()
+  if (error) throw error
+  if (!order) return json({ error: 'Orden de evento no encontrada.' }, 404)
+  if (order.estado !== 'pending') return json({ error: 'La orden ya no esta pendiente de pago.' }, 409)
+  if (new Date(order.expira_en).getTime() <= Date.now()) {
+    await db.from('ordenes_evento').update({ estado: 'canceled' }).eq('id', order.id)
+    return json({ error: 'La retencion de los cupos ya vencio.' }, 410)
+  }
+
+  const { data: registrations, error: registrationsError } = await db.from('inscripciones_evento')
+    .select('participante_id, modalidad_evento_id').eq('orden_evento_id', order.id).order('created_at').limit(1)
+  if (registrationsError) throw registrationsError
+  const firstRegistration = registrations?.[0]
+  if (!firstRegistration) return json({ error: 'La orden no tiene participantes.' }, 409)
+
+  const [{ data: participant }, { data: modality }, { data: event }, { data: business }, { data: existingPayment }] = await Promise.all([
+    db.from('participantes').select('*').eq('id', firstRegistration.participante_id).maybeSingle(),
+    db.from('modalidades_evento').select('nombre').eq('id', firstRegistration.modalidad_evento_id).maybeSingle(),
+    db.from('eventos').select('nombre, slug').eq('id', order.evento_id).maybeSingle(),
+    db.from('negocios').select('nombre, slug, provider_account_id').eq('id', order.negocio_id).maybeSingle(),
+    db.from('pagos').select('*').eq('orden_evento_id', order.id).eq('estado', 'pending').order('creado_en', { ascending: false }).limit(1).maybeSingle(),
+  ])
+  if (!participant || !event || !business) return json({ error: 'La orden no tiene toda la informacion requerida.' }, 409)
+  if (existingPayment?.provider_checkout_id) return json(orderCheckoutResponse(existingPayment, order, event, business, modality?.nombre), 200)
+
+  const providerInvoice = `${reference}-${crypto.randomUUID().replaceAll('-', '').slice(0, 8).toUpperCase()}`
+  let payment = existingPayment
+  if (payment) {
+    const { data, error: paymentError } = await db.from('pagos').update({ provider_payload: { ...objectValue(payment.provider_payload), checkout: 'pending', providerInvoice } }).eq('id', payment.id).select('*').single()
+    if (paymentError) throw paymentError
+    payment = data
+  } else {
+    const { data, error: paymentError } = await db.from('pagos').insert({
+      negocio_id: order.negocio_id, orden_evento_id: order.id, tipo_pago: 'evento', estado: 'pending',
+      moneda: order.moneda_codigo, monto_base_minor: order.monto_base_minor,
+      monto_total_minor: order.total_minor, comision_plataforma_minor: order.comision_plataforma_minor,
+      cargo_pasarela_minor: order.cargo_pasarela_minor, neto_negocio_minor: order.monto_base_minor,
+      payment_provider: 'epayco', provider_reference: reference,
+      provider_account_id: business.provider_account_id ?? null,
+      provider_payload: { checkout: 'pending', providerInvoice },
+    }).select('*').single()
+    if (paymentError) throw paymentError
+    payment = data
+  }
+  if (!payment) throw new Error('No se pudo preparar el pago de la orden.')
+
+  const session = await createEpaycoSession({
+    amountMinor: payment.monto_total_minor, currency: payment.moneda, reference, providerInvoice,
+    customerName: order.comprador_nombre, customerPhone: order.comprador_telefono_e164,
+    customerEmail: order.comprador_email, customerDocumentType: participant.tipo_documento,
+    customerDocument: participant.numero_documento, businessName: business.nombre,
+    description: `${event.nombre} - ${order.cantidad} ${order.cantidad === 1 ? 'cupo' : 'cupos'}`,
+    ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '127.0.0.1',
+    responseUrl: `${appPublicUrl()}/eventos/inscripciones/${reference}/resultado`,
+    confirmationUrl: `${supabaseUrl}/functions/v1/epayco-webhook`,
+  })
+  const { data: updatedPayment, error: updateError } = await db.from('pagos').update({
+    provider_checkout_id: session.sessionId, provider_payment_id: session.sessionId,
+    provider_payload: { checkout: 'created', providerInvoice, sessionId: session.sessionId, test: Deno.env.get('EPAYCO_ENV') !== 'production' },
+  }).eq('id', payment.id).select('*').single()
+  if (updateError) throw updateError
+  return json(orderCheckoutResponse(updatedPayment, order, event, business, modality?.nombre), 200)
+}
+
+function orderCheckoutResponse(payment: Record<string, unknown>, order: Record<string, unknown>, event: Record<string, unknown>, business: Record<string, unknown>, modalityName?: string) {
+  return { reference: order.referencia_publica, sessionId: payment.provider_checkout_id, test: Deno.env.get('EPAYCO_ENV') !== 'production', totalMinor: payment.monto_total_minor, currency: payment.moneda, eventName: event.nombre, eventSlug: event.slug, businessSlug: business.slug, businessName: business.nombre, modalityName: modalityName ?? 'Inscripcion', quantity: order.cantidad }
+}
 
 function checkoutResponse(payment: Record<string, unknown>, registration: Record<string, unknown>, event: Record<string, unknown>, business: Record<string, unknown>, modalityName?: string) {
   return { reference: registration.referencia_publica, sessionId: payment.provider_checkout_id, test: Deno.env.get('EPAYCO_ENV') !== 'production', totalMinor: payment.monto_total_minor, currency: payment.moneda, eventName: event.nombre, eventSlug: event.slug, businessSlug: business.slug, businessName: business.nombre, modalityName: modalityName ?? 'Inscripcion' }

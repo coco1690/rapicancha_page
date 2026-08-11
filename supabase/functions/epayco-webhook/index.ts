@@ -30,7 +30,7 @@ Deno.serve(async (request) => {
     const adminClient = createClient(supabaseUrl, secretKey, { auth: { autoRefreshToken: false, persistSession: false } })
     const { data: payment, error: paymentError } = await adminClient
       .from('pagos')
-      .select('id, reserva_id, inscripcion_evento_id, monto_total_minor, moneda, provider_payload')
+      .select('id, reserva_id, inscripcion_evento_id, orden_evento_id, monto_total_minor, moneda, provider_payload')
       .or(referenceFilter)
       .maybeSingle()
 
@@ -46,6 +46,7 @@ Deno.serve(async (request) => {
     const nextPaymentStatus = paid ? 'paid' : refunded ? 'refunded' : failed ? 'failed' : 'pending'
     const nextReservationStatus = paid ? 'confirmada' : refunded ? 'reembolsada' : failed ? 'expirada' : 'pendiente_pago'
     const nextEventRegistrationStatus = paid ? 'pagada' : refunded ? 'reembolsada' : failed ? 'cancelada' : 'pendiente_pago'
+    const nextEventOrderStatus = paid ? 'paid' : refunded ? 'refunded' : failed ? 'failed' : 'pending'
 
     const { error: paymentUpdateError } = await adminClient.from('pagos').update({
       estado: nextPaymentStatus,
@@ -78,6 +79,16 @@ Deno.serve(async (request) => {
         .eq('id', payment.inscripcion_evento_id)
       if (registrationUpdateError) {
         throw new Error(`No se pudo actualizar la inscripcion: ${registrationUpdateError.message}`)
+      }
+    }
+
+    if (payment.orden_evento_id) {
+      const { error: orderUpdateError } = await adminClient
+        .from('ordenes_evento')
+        .update({ estado: nextEventOrderStatus })
+        .eq('id', payment.orden_evento_id)
+      if (orderUpdateError) {
+        throw new Error(`No se pudo actualizar la orden del evento: ${orderUpdateError.message}`)
       }
     }
 
@@ -133,7 +144,7 @@ function readReference(payload: Record<string, unknown>) {
 }
 
 function rapicanchaReference(reference: string) {
-  const match = reference.match(/^(RAPI-[A-Z0-9]{16})/i)
+  const match = reference.match(/^(RAPI-[A-Z0-9]{16}|EVT-[A-Z0-9]{20}|EVO-[A-Z0-9]{20})/i)
   return match?.[1]?.toUpperCase() ?? reference
 }
 

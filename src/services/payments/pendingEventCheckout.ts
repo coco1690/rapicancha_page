@@ -19,7 +19,7 @@ export function readPendingEventCheckout(businessSlug: string, eventSlug: string
     const raw = window.localStorage.getItem(storageKey)
     if (!raw) return null
     const value = JSON.parse(raw) as PendingEventCheckout
-    if (value.businessSlug !== businessSlug || value.eventSlug !== eventSlug || new Date(value.receipt.expira_en).getTime() <= Date.now()) {
+    if (!/^EVO-[A-Z0-9]{20}$/.test(value.receipt.referencia_publica) || value.businessSlug !== businessSlug || value.eventSlug !== eventSlug || new Date(value.receipt.expira_en).getTime() <= Date.now()) {
       window.localStorage.removeItem(storageKey)
       return null
     }

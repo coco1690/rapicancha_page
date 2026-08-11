@@ -18,12 +18,14 @@ export type EventCheckout = {
 
 export type EventRegistrationReceipt = {
   referencia_publica: string
-  numero_inscripcion: string
-  precio_base_minor: number
+  cantidad: number
+  monto_base_minor: number
   tarifa_plataforma_minor: number
+  cargo_pasarela_minor: number
   total_minor: number
   moneda_codigo: string
   expira_en: string
+  inscripciones: Array<{ numero_inscripcion: string; referencia_publica: string; participante: string }>
 }
 
 export type EventPaymentStatus = 'paid' | 'pending' | 'failed' | 'refunded'
@@ -45,6 +47,8 @@ export type EventPaymentStatusResponse = {
     modalityName: string
     businessName: string
     businessSlug: string
+    quantity?: number
+    registrations?: Array<{ number: string; bib: string | null; shirtSize: string | null; participantName: string }>
   }
 }
 
@@ -87,12 +91,19 @@ export const eventRepository = {
     ensure(result.error)
     return result.data ?? []
   },
+  quoteEventOrder: async (currency: string, baseMinor: number) => {
+    const result = await client().rpc('cotizar_compra', { p_proveedor: 'epayco', p_tipo_pago: 'evento', p_moneda_codigo: currency, p_precio_base_minor: baseMinor })
+    ensure(result.error)
+    const quote = result.data?.[0] as PaymentQuote | undefined
+    if (!quote) throw new Error('No se pudo calcular el total de la orden.')
+    return quote
+  },
   createPublicRegistration: async (input: DatabaseRegistrationInput): Promise<EventRegistrationReceipt> => {
-    const result = await client().rpc('crear_inscripcion_evento_publica', input)
+    const result = await client().rpc('crear_orden_evento_publica', input)
     ensure(result.error)
     const registration = result.data?.[0]
     if (!registration) throw new Error('No se pudo generar la inscripcion.')
-    return registration
+    return { ...registration, inscripciones: Array.isArray(registration.inscripciones) ? registration.inscripciones as EventRegistrationReceipt['inscripciones'] : [] }
   },
   createEventCheckout: async (reference: string) => {
     const { data, error } = await client().functions.invoke<EventCheckout | { error?: string }>('create-event-checkout', { body: { reference } })
@@ -187,19 +198,24 @@ export const eventRepository = {
 
 export type DatabaseRegistrationInput = {
   p_modalidad_evento_id: string
-  p_categoria_evento_id: string
-  p_nombres: string
-  p_apellidos: string
-  p_tipo_documento: string
-  p_numero_documento: string
-  p_fecha_nacimiento: string
-  p_genero: string
-  p_email: string
-  p_telefono_e164: string
-  p_contacto_emergencia_nombre: string
-  p_contacto_emergencia_telefono_e164: string
-  p_talla_camiseta: string
-  p_peso_declarado: number
+  p_participantes: Array<{
+    categoria_id: string
+    nombres: string
+    apellidos: string
+    tipo_documento: string
+    numero_documento: string
+    fecha_nacimiento: string
+    genero: string
+    email: string
+    telefono_e164: string
+    contacto_emergencia_nombre: string
+    contacto_emergencia_telefono_e164: string
+    talla_camiseta: string
+    peso_declarado: number
+  }>
+  p_comprador_nombre: string
+  p_comprador_email: string
+  p_comprador_telefono_e164: string
   p_acepta_terminos: boolean
   p_acepta_privacidad: boolean
 }

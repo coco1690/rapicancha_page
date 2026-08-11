@@ -717,6 +717,7 @@ export type Database = {
           negocio_id: string
           numero_dorsal: string | null
           numero_inscripcion: string
+          orden_evento_id: string | null
           participante_id: string
           peso_declarado: number | null
           precio_base_minor: number
@@ -747,6 +748,7 @@ export type Database = {
           negocio_id: string
           numero_dorsal?: string | null
           numero_inscripcion: string
+          orden_evento_id?: string | null
           participante_id: string
           peso_declarado?: number | null
           precio_base_minor: number
@@ -777,6 +779,7 @@ export type Database = {
           negocio_id?: string
           numero_dorsal?: string | null
           numero_inscripcion?: string
+          orden_evento_id?: string | null
           participante_id?: string
           peso_declarado?: number | null
           precio_base_minor?: number
@@ -810,6 +813,13 @@ export type Database = {
             columns: ["modalidad_evento_id"]
             isOneToOne: false
             referencedRelation: "modalidades_evento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inscripciones_evento_orden_evento_id_fkey"
+            columns: ["orden_evento_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_evento"
             referencedColumns: ["id"]
           },
           {
@@ -1229,6 +1239,110 @@ export type Database = {
           },
         ]
       }
+      ordenes_evento: {
+        Row: {
+          cantidad: number
+          cargo_fijo_pasarela_snapshot_minor: number
+          cargo_pasarela_minor: number
+          comision_plataforma_minor: number
+          comprador_email: string
+          comprador_nombre: string
+          comprador_telefono_e164: string
+          comprador_usuario_id: string | null
+          created_at: string
+          estado: string
+          evento_id: string
+          expira_en: string
+          id: string
+          impuesto_pasarela_snapshot: number
+          moneda_codigo: string
+          monto_base_minor: number
+          negocio_id: string
+          referencia_publica: string
+          tasa_pasarela_snapshot: number
+          tasa_plataforma_snapshot: number
+          total_minor: number
+          updated_at: string
+        }
+        Insert: {
+          cantidad: number
+          cargo_fijo_pasarela_snapshot_minor?: number
+          cargo_pasarela_minor: number
+          comision_plataforma_minor: number
+          comprador_email: string
+          comprador_nombre: string
+          comprador_telefono_e164: string
+          comprador_usuario_id?: string | null
+          created_at?: string
+          estado?: string
+          evento_id: string
+          expira_en: string
+          id?: string
+          impuesto_pasarela_snapshot?: number
+          moneda_codigo: string
+          monto_base_minor: number
+          negocio_id: string
+          referencia_publica: string
+          tasa_pasarela_snapshot?: number
+          tasa_plataforma_snapshot?: number
+          total_minor: number
+          updated_at?: string
+        }
+        Update: {
+          cantidad?: number
+          cargo_fijo_pasarela_snapshot_minor?: number
+          cargo_pasarela_minor?: number
+          comision_plataforma_minor?: number
+          comprador_email?: string
+          comprador_nombre?: string
+          comprador_telefono_e164?: string
+          comprador_usuario_id?: string | null
+          created_at?: string
+          estado?: string
+          evento_id?: string
+          expira_en?: string
+          id?: string
+          impuesto_pasarela_snapshot?: number
+          moneda_codigo?: string
+          monto_base_minor?: number
+          negocio_id?: string
+          referencia_publica?: string
+          tasa_pasarela_snapshot?: number
+          tasa_plataforma_snapshot?: number
+          total_minor?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordenes_evento_evento_id_fkey"
+            columns: ["evento_id"]
+            isOneToOne: false
+            referencedRelation: "eventos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordenes_evento_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordenes_evento_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "negocios_publicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordenes_evento_negocio_id_fkey"
+            columns: ["negocio_id"]
+            isOneToOne: false
+            referencedRelation: "v_marketplace_canchas"
+            referencedColumns: ["negocio_id"]
+          },
+        ]
+      }
       pagos: {
         Row: {
           actualizado_en: string
@@ -1246,6 +1360,7 @@ export type Database = {
           monto_total_minor: number
           negocio_id: string
           neto_negocio_minor: number
+          orden_evento_id: string | null
           payment_provider: string
           provider_account_id: string | null
           provider_checkout_id: string | null
@@ -1278,6 +1393,7 @@ export type Database = {
           monto_total_minor: number
           negocio_id: string
           neto_negocio_minor: number
+          orden_evento_id?: string | null
           payment_provider?: string
           provider_account_id?: string | null
           provider_checkout_id?: string | null
@@ -1310,6 +1426,7 @@ export type Database = {
           monto_total_minor?: number
           negocio_id?: string
           neto_negocio_minor?: number
+          orden_evento_id?: string | null
           payment_provider?: string
           provider_account_id?: string | null
           provider_checkout_id?: string | null
@@ -1361,6 +1478,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_marketplace_canchas"
             referencedColumns: ["negocio_id"]
+          },
+          {
+            foreignKeyName: "pagos_orden_evento_id_fkey"
+            columns: ["orden_evento_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_evento"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "pagos_reserva_id_fkey"
@@ -2761,6 +2885,28 @@ export type Database = {
           moneda_codigo: string
           numero_inscripcion: string
           precio_base_minor: number
+          referencia_publica: string
+          tarifa_plataforma_minor: number
+          total_minor: number
+        }[]
+      }
+      crear_orden_evento_publica: {
+        Args: {
+          p_acepta_privacidad: boolean
+          p_acepta_terminos: boolean
+          p_comprador_email: string
+          p_comprador_nombre: string
+          p_comprador_telefono_e164: string
+          p_modalidad_evento_id: string
+          p_participantes: Json
+        }
+        Returns: {
+          cantidad: number
+          cargo_pasarela_minor: number
+          expira_en: string
+          inscripciones: Json
+          moneda_codigo: string
+          monto_base_minor: number
           referencia_publica: string
           tarifa_plataforma_minor: number
           total_minor: number
